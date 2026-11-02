@@ -12,6 +12,8 @@ type RoomScreenProps = {
   onLeave: () => void
   onRetry: () => void
   onBack: () => void
+  onStartGame: () => void
+  onSubmitAnswer: (answerIndex: number) => void
 }
 
 const statusLabels: Record<RoomStatus, string> = {
@@ -22,7 +24,7 @@ const statusLabels: Record<RoomStatus, string> = {
   error: 'Bağlantı sorunu',
 }
 
-export function RoomScreen({ game, room, playerId, status, error, onCreate, onJoin, onLeave, onRetry, onBack }: RoomScreenProps) {
+export function RoomScreen({ game, room, playerId, status, error, onCreate, onJoin, onLeave, onRetry, onBack, onStartGame, onSubmitAnswer }: RoomScreenProps) {
   const [code, setCode] = useState('')
   const [copied, setCopied] = useState(false)
 
@@ -61,6 +63,25 @@ export function RoomScreen({ game, room, playerId, status, error, onCreate, onJo
             {!player.connected && <span className="offline-label">Yeniden bağlanıyor</span>}
           </li>)}</ul>
         </section>
+        {room.gameId === 'trivia' && <section className="trivia-game" aria-live="polite">
+          {room.trivia.status === 'lobby' && <>
+            <div className="trivia-intro"><span>💡</span><div><b>Genel Kültür hazır!</b><p>10 soru, her doğru cevap 10 puan. Herkes cevaplayınca sonraki soru açılır.</p></div></div>
+            {room.players.find((player) => player.id === playerId)?.isOwner
+              ? <button className="primary-button trivia-start" onClick={onStartGame}>Oyunu Başlat <span>→</span></button>
+              : <p className="trivia-waiting">Oda sahibinin oyunu başlatması bekleniyor…</p>}
+          </>}
+          {room.trivia.status === 'playing' && room.trivia.question && <>
+            <div className="trivia-progress">SORU {room.trivia.questionIndex + 1} / {room.trivia.totalQuestions}<span>{room.trivia.answeredPlayerIds.length}/{room.players.filter((player) => player.connected).length} cevapladı</span></div>
+            <h2 className="trivia-question">{room.trivia.question.prompt}</h2>
+            <div className="trivia-options">{room.trivia.question.options.map((option, index) => {
+              const alreadyAnswered = room.trivia.answeredPlayerIds.includes(playerId)
+              return <button key={option} disabled={alreadyAnswered || status !== 'connected'} onClick={() => onSubmitAnswer(index)}>{String.fromCharCode(65 + index)}. {option}</button>
+            })}</div>
+            {room.trivia.answeredPlayerIds.includes(playerId) && <p className="trivia-waiting">Cevabın alındı. Diğer oyuncular bekleniyor…</p>}
+          </>}
+          {room.trivia.status === 'finished' && <div className="trivia-results"><span>🏆</span><h2>Yarışma bitti!</h2><p>İşte final puanları</p></div>}
+          {(room.trivia.status === 'playing' || room.trivia.status === 'finished') && <div className="trivia-scores"><h3>{room.trivia.status === 'finished' ? 'Sonuç tablosu' : 'Puan durumu'}</h3>{[...room.trivia.scores].sort((a, b) => b.score - a.score).map((score, index) => <div key={score.playerId}><span>{index + 1}. {score.nickname}</span><b>{score.score} puan</b></div>)}</div>}
+        </section>}
         {status === 'reconnecting' && <p className="reconnecting-note">Bağlantı geçici olarak kesildi. Oda üyeliğin kısa süre korunur.</p>}
         {status === 'error' && error && <div className="error-message room-error" role="alert">{error}</div>}
         <div className="room-footer-actions">

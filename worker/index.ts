@@ -10,6 +10,7 @@ import {
   parseClientMessage,
   pruneDisconnected,
   publicRoom,
+  TRIVIA_QUESTIONS,
   ROOM_CODE_ALPHABET,
   type RoomPlayer,
   type RoomState,
@@ -146,7 +147,7 @@ export class RoomDurableObject extends DurableObject<Env> {
       } else {
         if (current.trivia.status !== 'playing') return this.reject(socket, 'game_not_playing')
         if (current.trivia.answered.includes(attachment.playerId)) return this.reject(socket, 'already_answered')
-        const question = (await import('./room-model')).TRIVIA_QUESTIONS[current.trivia.questionIndex]
+        const question = TRIVIA_QUESTIONS[current.trivia.questionIndex]
         const correct = message.answerIndex === question.answerIndex
         const scores = { ...current.trivia.scores, [attachment.playerId]: (current.trivia.scores[attachment.playerId] ?? 0) + (correct ? 10 : 0) }
         const answered = [...current.trivia.answered, attachment.playerId]
@@ -158,7 +159,7 @@ export class RoomDurableObject extends DurableObject<Env> {
         if (allAnswered) {
           questionIndex += 1
           nextAnswered = []
-          if (questionIndex >= (await import('./room-model')).TRIVIA_QUESTIONS.length) status = 'finished'
+          if (questionIndex >= TRIVIA_QUESTIONS.length) status = 'finished'
         }
         this.room = { ...current, trivia: { status, questionIndex, scores, answered: nextAnswered } }
       }

@@ -27,7 +27,9 @@ type SocketAttachment = { mode: PendingMode; roomCode: string; playerId?: string
 type TokenClaims = { version: 1; roomCode: string; playerId: string; nickname: string; expiresAt: number }
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
+
 type TriviaApiQuestion = {
+  id?: string
   question?: { text?: string }
   correctAnswer?: string
   incorrectAnswers?: string[]
@@ -52,47 +54,15 @@ async function translateQuestionToTurkish(question: TriviaQuestion): Promise<Tri
   return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
 }
 
-const TURKISH_TRIVIA_QUESTIONS: TriviaQuestion[] = [
-  { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
-  { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Mars', 'Jüpiter', 'Venüs'], answerIndex: 2 },
-  { prompt: 'Suyun kimyasal formülü nedir?', options: ['CO2', 'O2', 'H2O', 'NaCl'], answerIndex: 2 },
-  { prompt: 'İstanbul Boğazı hangi iki denizi birbirine bağlar?', options: ['Karadeniz ile Marmara Denizi', 'Ege Denizi ile Akdeniz', 'Marmara Denizi ile Ege Denizi', 'Karadeniz ile Hazar Denizi'], answerIndex: 0 },
-  { prompt: 'Dünyanın doğal uydusunun adı nedir?', options: ['Europa', 'Ay', 'Titan', 'Phobos'], answerIndex: 1 },
-  { prompt: 'Bir üçgenin iç açılarının toplamı kaç derecedir?', options: ['90', '180', '270', '360'], answerIndex: 1 },
-  { prompt: 'Bitkiler fotosentez sırasında hangi gazı kullanır?', options: ['Oksijen', 'Azot', 'Karbondioksit', 'Hidrojen'], answerIndex: 2 },
-  { prompt: 'İnsan vücudundaki kanı pompalayan organ hangisidir?', options: ['Akciğer', 'Beyin', 'Karaciğer', 'Kalp'], answerIndex: 3 },
-  { prompt: '“Nutuk” adlı eserin yazarı kimdir?', options: ['Mehmet Akif Ersoy', 'Mustafa Kemal Atatürk', 'Namık Kemal', 'Ziya Gökalp'], answerIndex: 1 },
-  { prompt: 'Dünyanın en büyük okyanusu hangisidir?', options: ['Atlas Okyanusu', 'Hint Okyanusu', 'Arktik Okyanusu', 'Pasifik Okyanusu'], answerIndex: 3 },
-  { prompt: 'Satrançta oyun başında her oyuncunun kaç taşı vardır?', options: ['12', '16', '18', '20'], answerIndex: 1 },
-  { prompt: 'Türkiye’nin başkenti neresidir?', options: ['İstanbul', 'İzmir', 'Ankara', 'Bursa'], answerIndex: 2 },
-  { prompt: 'Işığın boşluktaki hızı yaklaşık kaç kilometre/saniyedir?', options: ['30.000', '150.000', '300.000', '3.000.000'], answerIndex: 2 },
-  { prompt: '“Kızıl Gezegen” olarak bilinen gezegen hangisidir?', options: ['Merkür', 'Mars', 'Satürn', 'Neptün'], answerIndex: 1 },
-  { prompt: 'Dünya üzerindeki en büyük memeli hayvan hangisidir?', options: ['Afrika fili', 'Zürafa', 'Mavi balina', 'Su aygırı'], answerIndex: 2 },
-  { prompt: 'Türkiye’nin en yüksek dağı hangisidir?', options: ['Erciyes Dağı', 'Ağrı Dağı', 'Uludağ', 'Kaçkar Dağı'], answerIndex: 1 },
-  { prompt: 'Bir yıl, artık yıl değilse kaç gündür?', options: ['364', '365', '366', '367'], answerIndex: 1 },
-  { prompt: 'Periyodik tabloda “Fe” hangi elementin simgesidir?', options: ['Flor', 'Fosfor', 'Demir', 'Gümüş'], answerIndex: 2 },
-  { prompt: 'Olimpiyat halkalarının sayısı kaçtır?', options: ['4', '5', '6', '7'], answerIndex: 1 },
-  { prompt: 'Türkiye hangi kıtalar üzerinde topraklara sahiptir?', options: ['Avrupa ve Asya', 'Asya ve Afrika', 'Avrupa ve Afrika', 'Avrupa ve Amerika'], answerIndex: 0 },
-];
+type TriviaCandidate = TriviaQuestion & { sourceId?: string }
 
-function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
-  return TURKISH_TRIVIA_QUESTIONS.map((question) => {
-    const options = [...question.options];
-    const correct = options[question.answerIndex];
-    for (let index = options.length - 1; index > 0; index -= 1) {
-      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1);
-      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]];
-    }
-    return { prompt: question.prompt, options, answerIndex: options.indexOf(correct) };
-  });
-}
-
-async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
-  const response = await fetch('https://the-trivia-api.com/v2/questions?limit=20&categories=general_knowledge', {
+async function fetchTriviaQuestions(): Promise<TriviaCandidate[]> {
+  // Her oyun için canlı kaynaktan soru al; sabit ve sınırlı bir yerel soru havuzu kullanma.
+  const response = await fetch('https://the-trivia-api.com/v2/questions?limit=50&categories=general_knowledge', {
     headers: { Accept: 'application/json' },
     signal: AbortSignal.timeout(8000),
   })
-  if (!response.ok) throw new Error('Trivia API request failed')
+  if (!response.ok) throw new Error(`Trivia API request failed (HTTP ${response.status})`)
   const payload = await response.json() as TriviaApiQuestion[]
   if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
 
@@ -106,17 +76,22 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
       const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
       ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
     }
-    return [{ prompt, options, answerIndex: options.indexOf(correct) }]
+    return [{ prompt, options, answerIndex: options.indexOf(correct), ...(item.id ? { sourceId: item.id } : {}) }]
   })
   if (questions.length < 10) throw new Error('Trivia API returned too few questions')
 
-  // Çeviri servisi hata verirse İngilizce soru göstermek yerine hazır Türkçe soruları kullan.
-  try {
-    return await Promise.all(questions.map((question) => translateQuestionToTurkish(question)))
-  } catch (error) {
-    console.warn('Genel kültür soruları Türkçeye çevrilemedi; hazır Türkçe sorular kullanılacak:', error)
-    return shuffledTurkishTriviaQuestions()
-  }
+  const translated = await Promise.all(questions.map(async (question) => {
+    try {
+      const translatedQuestion = await translateQuestionToTurkish(question)
+      return { ...translatedQuestion, ...(question.sourceId ? { sourceId: question.sourceId } : {}) }
+    } catch (error) {
+      console.warn('Bir genel kültür sorusu Türkçeye çevrilemedi:', error)
+      return null
+    }
+  }))
+  const usable = translated.filter((question): question is TriviaQuestion => question !== null)
+  if (usable.length === 0) throw new Error('No trivia questions could be translated')
+  return usable
 }
 
 function corsHeaders(origin: string) {
@@ -190,6 +165,54 @@ export class RoomDurableObject extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const mode = request.headers.get('X-Ufuk-Room-Action')
+    if (mode === 'reserve_trivia_questions') {
+      if (request.method !== 'POST' || new URL(request.url).pathname !== '/trivia/reserve') {
+        return Response.json({ error: 'invalid_request' }, { status: 400 })
+      }
+      let candidates: TriviaCandidate[]
+      try {
+        const value = await request.json() as unknown
+        if (!Array.isArray(value) || value.some((item) => !item || typeof item !== 'object' ||
+          typeof (item as TriviaCandidate).prompt !== 'string' || !Array.isArray((item as TriviaCandidate).options) ||
+          (item as TriviaCandidate).options.length !== 4 || !Number.isInteger((item as TriviaCandidate).answerIndex) ||
+          ((item as TriviaCandidate).sourceId !== undefined && typeof (item as TriviaCandidate).sourceId !== 'string'))) {
+          return Response.json({ error: 'invalid_questions' }, { status: 400 })
+        }
+        candidates = value as TriviaCandidate[]
+      } catch {
+        return Response.json({ error: 'invalid_questions' }, { status: 400 })
+      }
+      const keyedCandidates = await Promise.all(candidates.map(async (question) => {
+        const normalized = question.prompt.normalize('NFKC').toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+        if (!normalized) return null
+        const promptDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
+        const keys = [`trivia-used:prompt:${Array.from(new Uint8Array(promptDigest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`]
+        if (question.sourceId) {
+          const sourceDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(question.sourceId))
+          keys.push(`trivia-used:source:${Array.from(new Uint8Array(sourceDigest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`)
+        }
+        return { question, keys }
+      }))
+      const selected = await this.ctx.storage.transaction(async (transaction) => {
+        const result: TriviaCandidate[] = []
+        const seen = new Set<string>()
+        for (const item of keyedCandidates) {
+          if (!item || item.keys.some((key) => seen.has(key))) continue
+          let alreadyUsed = false
+          for (const key of item.keys) {
+            if (await transaction.get<boolean>(key)) alreadyUsed = true
+          }
+          if (alreadyUsed) continue
+          result.push(item.question)
+          for (const key of item.keys) {
+            seen.add(key)
+            await transaction.put(key, true)
+          }
+        }
+        return result
+      })
+      return Response.json({ questions: selected })
+    }
     const code = request.headers.get('X-Ufuk-Room-Code')
     const origin = request.headers.get('X-Ufuk-Verified-Origin')
     if (mode !== 'create' && mode !== 'join' || !code || !isValidRoomCode(code) || !origin) {
@@ -237,7 +260,17 @@ export class RoomDurableObject extends DurableObject<Env> {
         if (current.trivia.status !== 'lobby') return this.reject(socket, 'game_already_started')
         let questions: TriviaQuestion[]
         try {
-          questions = await fetchTriviaQuestions()
+          const candidates = await fetchTriviaQuestions()
+          const history = this.env.ROOMS.get(this.env.ROOMS.idFromName('GLOBAL_TRIVIA_HISTORY'))
+          const reserved = await history.fetch(new Request('https://room.internal/trivia/reserve', {
+            method: 'POST',
+            headers: { 'X-Ufuk-Room-Action': 'reserve_trivia_questions', 'Content-Type': 'application/json' },
+            body: JSON.stringify(candidates),
+          }))
+          if (!reserved.ok) throw new Error('Trivia history could not be updated')
+          const result = await reserved.json() as { questions?: TriviaQuestion[] }
+          questions = result.questions ?? []
+          if (questions.length === 0) return this.reject(socket, 'no_new_questions_available')
         } catch (error) {
           console.error('Genel kültür soru yükleme hatası:', error)
           return this.reject(socket, 'question_source_unavailable')

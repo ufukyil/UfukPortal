@@ -1,41 +1,80 @@
 # UfukPortal — Online Oyun Salonu
 
-Arkadaşların birlikte oynayabilmesi için geliştirilen, Türkçe arayüzlü UfukPortal'ın ilk aşaması. Bu sürüm ana sayfayı, geçici takma ad girişini, üç oyun kartını ve oda akışı taslağını içerir. Oda oluşturma ve gerçek zamanlı oyun henüz etkin değildir.
+React + TypeScript + Vite arayüzü ve ayrı bir Cloudflare Worker üzerinde çalışan gerçek zamanlı oda altyapısı. Sessiz Sinema, Genel Kültür ve Film Tahmin Etmece için oda oluşturma ve oda koduyla katılma desteklenir. Oyun başlatma, tur ve puanlama bu aşamanın kapsamında değildir.
 
 ## Gereksinimler
 
 - Node.js 20 veya üzeri
 - npm
 
-## Yerel kurulum
+## Yerel geliştirme
+
+Bağımlılıkları kurun:
 
 ```bash
 npm install
+```
+
+Worker yerel gizli ayarlarını proje kökünde `.dev.vars` dosyasına ekleyin. Dosya Git tarafından yok sayılır. PowerShell örneği:
+
+```powershell
+$roomSecret = [Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+@"
+ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+ROOM_TOKEN_SECRET=$roomSecret
+"@ | Set-Content .dev.vars
+```
+
+İki terminal açın:
+
+```bash
+npm run dev:worker
+```
+
+```bash
 npm run dev
 ```
 
-Vite'ın gösterdiği yerel adresi tarayıcıda açın. Üretim derlemesi için `npm run build`, derlemeyi yerel olarak sunmak için `npm run preview` komutlarını kullanın.
+Vite `5173` portundaki `/api` isteklerini yerel Worker'ın `8787` portuna iletir. Tarayıcıda Vite'ın yazdığı adresi açın. Worker sağlık kontrolü `http://127.0.0.1:8787/api/health` adresindedir.
 
-Takma ad yalnızca tarayıcı belleğinde tutulur; sunucuya veya kalıcı bir kullanıcı veritabanına gönderilmez. Sayfa yenilenince silinir.
+Testleri ve üretim derlemesini çalıştırın:
 
-## Mimari
+```bash
+npm test
+npm run build
+```
 
-- React, TypeScript ve Vite ile tek sayfa uygulaması.
-- Oyun tanımları `src/App.tsx` içindeki veri listesinden oluşturulur; ayrı oyun mantıkları sonraki aşamalarda bileşenlere ayrılabilir.
-- Henüz API, kullanıcı hesabı, kalıcı veri deposu veya gerçek zamanlı bağlantı yoktur. Oda ekranındaki oluşturma düğmesi devre dışıdır; oda kodu alanı yalnızca taslak doğrulama gösterir.
-- Gerçek zamanlı aşamada Cloudflare Worker HTTP/WebSocket uç noktalarını, Durable Objects ise oda başına geçici durumu yönetebilir. Takma ad gibi oda verileri bellek içinde tutulabilir; kalıcı kullanıcı veritabanı gerekmez.
+Wrangler türlerini yapılandırmadan yeniden üretmek için `npm run cf:types` kullanın.
 
-## Cloudflare Workers'a ücretsiz yayın hazırlığı
+## Oda altyapısı
 
-Önerilen basit yayın akışı: bu depoyu GitHub'a gönderin, Cloudflare hesabında Workers & Pages → Create application → Pages → Connect to Git yoluyla GitHub deposunu bağlayın. Build komutu `npm run build`, çıktı dizini `dist` olmalıdır. Git'e gönderilen değişiklikler otomatik derlenip yayımlanabilir; bilgisayarınızın açık kalması gerekmez.
+- `worker/index.ts`: Worker HTTP, origin ve WebSocket yükseltme kontrolleri ile oda başına Durable Object yönlendirmesi.
+- `worker/room-model.ts`: takma ad, oda kodu, mesaj şeması, 8 oyuncu sınırı ve bağlantı süresi kuralları.
+- `RoomDurableObject`: oda ve oyuncu durumunu bellekte tutar. Oda durumu veritabanına yazılmaz. Hibernation sırasında açık WebSocket bağlantılarının ekleri oda görünümünü geri kurar.
+- Oda kodları sunucuda kriptografik rastgelelikle 6 karakter üretilir. İstemciden sahiplik veya oyuncu listesi kabul edilmez.
+- Mesajlar JSON şeması, izin verilen işlem türleri ve 2 KiB boyut sınırıyla doğrulanır. WebSocket Origin değeri `ALLOWED_ORIGINS` listesinde tam eşleşmelidir.
+- Yeniden bağlanma bileti sunucu tarafından HMAC ile imzalanır ve yalnızca sekmenin `sessionStorage` alanında tutulur. Bağlantı 30 saniye içinde yeniden kurulabilir. Son oyuncu bağlantısı kesilince oda bellekte bu süre kadar tutulur; süre dolunca temizlenir. Açık bağlantısı olan odalarda bağlantı ekleri, oda durumu dışında kalıcı bir kullanıcı verisi oluşturmaz.
+- Kullanıcı hesabı, kalıcı kullanıcı veritabanı ve oyun başlatma/puanlama yoktur.
 
-Bu depo henüz Cloudflare hesabına bağlanmamış ve internete yayımlanmamıştır. Cloudflare'ın 2026-11-02 tarihli dokümantasyonuna göre Workers Free planı günlük 100.000 Worker isteği ve istek başına 10 ms CPU sunuyor; ücretsiz kotanın aşılması istekleri hata ile durdurabilir. Durable Objects de ücretsiz planda kullanılabilir; SQLite destekli nesneler için günlük 100.000 istek ve 13.000 GB-s çalışma süresi kotası bulunuyor. WebSocket kullanan oda tasarımında nesne hibernation API'si boşta bağlantı maliyetini sınırlamak için önemlidir. Kotalar zamanla değişebilir; uygulama büyürse dağıtım öncesi resmi limit sayfalarını yeniden kontrol edin. İstemciye gizli API anahtarı eklemeyin; sunucu sırlarını gerekiyorsa Cloudflare ortam değişkenlerinde tutun.
+## Yapılandırma ve yayın
 
-Resmi kaynaklar: [Workers limitleri](https://developers.cloudflare.com/workers/platform/limits/), [Durable Objects fiyatlandırması ve ücretsiz kotalar](https://developers.cloudflare.com/durable-objects/platform/pricing/), [Pages Git entegrasyonu](https://developers.cloudflare.com/pages/get-started/git-integration/).
+Mevcut Cloudflare Pages arayüzü ayrı kalır. Gerçek zamanlı API, `wrangler.jsonc` ile tanımlı bağımsız `ufukportal-room-api` Worker'ıdır. Yeni Durable Object sınıfı SQLite destekli `exports` yaşam döngüsü yapılandırmasını kullanır; Worker oda verisini SQLite'a yazmaz.
 
-## Sonraki geliştirme aşaması
+Cloudflare hesabında API'yi yayımlamadan önce:
 
-1. Worker endpoint'leri ve Durable Object oda sınıfını ekle.
-2. Oda oluşturma, kodla katılma, WebSocket bağlantısı ve katılımcı listesini uygula.
-3. Bağlantı hatası, oda doluluğu ve oda ömrü durumlarını kullanıcıya göster.
-4. Üç oyunun tur/puan akışlarını oda durumuna bağla.
+1. Worker'ın `ALLOWED_ORIGINS` değişkenine Pages sitesinin tam `https://...` origin'ini (gerekirse önizleme origin'lerini virgülle ayırarak) ekleyin. Joker origin kullanılmaz.
+2. Worker için `ROOM_TOKEN_SECRET` adında en az 32 karakterli bir secret oluşturun (`npx wrangler secret put ROOM_TOKEN_SECRET`). Bu değer frontend'e, `.env` dosyasına veya GitHub'a konmamalıdır.
+3. `npx wrangler login` sonrası `npm run deploy:worker` ile yalnızca Worker'ı yayımlayın. Wrangler çıktısında Worker adresini not edin.
+4. Cloudflare Pages proje ayarlarında `VITE_API_BASE_URL` build değişkenini Worker'ın `https://...workers.dev` adresine ayarlayın ve Pages build'ini çalıştırın. Vite bu adresi `wss://` bağlantısına dönüştürür.
+
+Bu depo şu anda hiçbir Cloudflare hesabına veya production API adresine bağlı değildir; burada deploy yapılmamıştır. Worker secret'ı, izin verilen production origin ve Pages `VITE_API_BASE_URL` ayarlanmadıkça canlı arayüz oda sunucusuna bağlanamaz.
+
+### Güncel ücretsiz plan notu
+
+Cloudflare belgeleri 2026-11-03 tarihinde kontrol edildi. Workers Free için günlük 100.000 istek ve istek başına 10 ms CPU; Durable Objects Free için SQLite destekli sınıflarda günlük 100.000 istek ve 13.000 GB-s çalışma süresi belirtiliyor. Ücretsiz limit aşımında ilgili işlemler hata verebilir. Hibernation boşta WebSocket odalarının süre maliyetini azaltır; bağlantı koptuktan sonraki 30 saniyelik bellekte tutma aralığı ise nesneyi çalışır durumda tutabilir ve süre kotasından tüketebilir. Trafiğe göre Cloudflare panelindeki gerçek kullanım izlenmelidir; limit ve fiyatlar değişebilir.
+
+Kaynaklar: [Workers limitleri](https://developers.cloudflare.com/workers/platform/limits/), [Durable Objects fiyatlandırması](https://developers.cloudflare.com/workers/platform/pricing/), [Durable Objects WebSocket hibernation](https://developers.cloudflare.com/durable-objects/best-practices/websockets/), [Wrangler yapılandırması](https://developers.cloudflare.com/workers/wrangler/configuration/).
+
+## Aşama kapsamı dışı
+
+Oyun turu, soru API'si, puanlama, kullanıcı hesabı, kalıcı oyuncu verisi ve production dağıtımı eklenmedi. Production ayarları hesap ve Pages URL'si gerektirdiğinden bu ortamda doğrulanmadı.

@@ -6,6 +6,7 @@ const origin = 'http://localhost:5173'
 const sockets: WebSocket[] = []
 
 afterEach(() => {
+  vi.unstubAllGlobals()
   for (const socket of sockets.splice(0)) {
     try { socket.close(1000, 'test_finished') } catch { /* Already closed. */ }
   }
@@ -202,7 +203,6 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
     const staleAnswerUpdate = nextMessage(guest)
     guest.send(JSON.stringify({ type: 'submit_answer', answerIndex: 0, questionIndex: 0 }))
     expect(((await staleAnswerUpdate).room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
-    vi.unstubAllGlobals()
   })
 
   it('reddeder origin dışı bağlantıları', async () => {

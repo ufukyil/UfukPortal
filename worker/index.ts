@@ -255,18 +255,21 @@ export class RoomDurableObject extends DurableObject<Env> {
       } catch {
         return Response.json({ error: 'invalid_questions' }, { status: 400 })
       }
+      const keyedCandidates = await Promise.all(candidates.map(async (question) => {
+        const normalized = question.prompt.normalize('NFKC').toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
+        if (!normalized) return null
+        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
+        const key = `trivia-used:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
+        return { question, key }
+      }))
       const selected = await this.ctx.storage.transaction(async (transaction) => {
         const result: TriviaQuestion[] = []
         const seen = new Set<string>()
-        for (const question of candidates) {
-          const normalized = question.prompt.normalize('NFKC').toLocaleLowerCase('tr').replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim()
-          if (!normalized) continue
-          const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
-          const key = `trivia-used:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
-          if (seen.has(key) || await transaction.get<boolean>(key)) continue
-          seen.add(key)
-          result.push(question)
-          await transaction.put(key, true)
+        for (const item of keyedCandidates) {
+          if (!item || seen.has(item.key) || await transaction.get<boolean>(item.key)) continue
+          seen.add(item.key)
+          result.push(item.question)
+          await transaction.put(item.key, true)
         }
         return result
       })

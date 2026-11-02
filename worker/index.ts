@@ -53,119 +53,41 @@ async function translateQuestionToTurkish(question: TriviaQuestion): Promise<Tri
   return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
 }
 
-const TURKISH_TRIVIA_QUESTIONS: TriviaQuestion[] = [
-  { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
-  { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Mars', 'Jüpiter', 'Venüs'], answerIndex: 2 },
-  { prompt: 'Suyun kimyasal formülü nedir?', options: ['CO2', 'O2', 'H2O', 'NaCl'], answerIndex: 2 },
-  { prompt: 'İstanbul Boğazı hangi iki denizi birbirine bağlar?', options: ['Karadeniz ile Marmara Denizi', 'Ege Denizi ile Akdeniz', 'Marmara Denizi ile Ege Denizi', 'Karadeniz ile Hazar Denizi'], answerIndex: 0 },
-  { prompt: 'Dünyanın doğal uydusunun adı nedir?', options: ['Europa', 'Ay', 'Titan', 'Phobos'], answerIndex: 1 },
-  { prompt: 'Bir üçgenin iç açılarının toplamı kaç derecedir?', options: ['90', '180', '270', '360'], answerIndex: 1 },
-  { prompt: 'Bitkiler fotosentez sırasında hangi gazı kullanır?', options: ['Oksijen', 'Azot', 'Karbondioksit', 'Hidrojen'], answerIndex: 2 },
-  { prompt: 'İnsan vücudundaki kanı pompalayan organ hangisidir?', options: ['Akciğer', 'Beyin', 'Karaciğer', 'Kalp'], answerIndex: 3 },
-  { prompt: '“Nutuk” adlı eserin yazarı kimdir?', options: ['Mehmet Akif Ersoy', 'Mustafa Kemal Atatürk', 'Namık Kemal', 'Ziya Gökalp'], answerIndex: 1 },
-  { prompt: 'Dünyanın en büyük okyanusu hangisidir?', options: ['Atlas Okyanusu', 'Hint Okyanusu', 'Arktik Okyanusu', 'Pasifik Okyanusu'], answerIndex: 3 },
-  { prompt: 'Satrançta oyun başında her oyuncunun kaç taşı vardır?', options: ['12', '16', '18', '20'], answerIndex: 1 },
-  { prompt: 'Türkiye’nin başkenti neresidir?', options: ['İstanbul', 'İzmir', 'Ankara', 'Bursa'], answerIndex: 2 },
-  { prompt: 'Işığın boşluktaki hızı yaklaşık kaç kilometre/saniyedir?', options: ['30.000', '150.000', '300.000', '3.000.000'], answerIndex: 2 },
-  { prompt: '“Kızıl Gezegen” olarak bilinen gezegen hangisidir?', options: ['Merkür', 'Mars', 'Satürn', 'Neptün'], answerIndex: 1 },
-  { prompt: 'Dünya üzerindeki en büyük memeli hayvan hangisidir?', options: ['Afrika fili', 'Zürafa', 'Mavi balina', 'Su aygırı'], answerIndex: 2 },
-  { prompt: 'Türkiye’nin en yüksek dağı hangisidir?', options: ['Erciyes Dağı', 'Ağrı Dağı', 'Uludağ', 'Kaçkar Dağı'], answerIndex: 1 },
-  { prompt: 'Bir yıl, artık yıl değilse kaç gündür?', options: ['364', '365', '366', '367'], answerIndex: 1 },
-  { prompt: 'Periyodik tabloda “Fe” hangi elementin simgesidir?', options: ['Flor', 'Fosfor', 'Demir', 'Gümüş'], answerIndex: 2 },
-  { prompt: 'Olimpiyat halkalarının sayısı kaçtır?', options: ['4', '5', '6', '7'], answerIndex: 1 },
-  { prompt: 'Türkiye hangi kıtalar üzerinde topraklara sahiptir?', options: ['Avrupa ve Asya', 'Asya ve Afrika', 'Avrupa ve Afrika', 'Avrupa ve Amerika'], answerIndex: 0 },
-  { prompt: 'Dünya atmosferinde en çok bulunan gaz hangisidir?', options: ['Oksijen', 'Azot', 'Karbondioksit', 'Hidrojen'], answerIndex: 1 },
-  { prompt: 'İtalya’nın başkenti neresidir?', options: ['Milano', 'Venedik', 'Roma', 'Napoli'], answerIndex: 2 },
-  { prompt: 'Japonya’nın para birimi hangisidir?', options: ['Won', 'Yuan', 'Yen', 'Baht'], answerIndex: 2 },
-  { prompt: 'Mona Lisa tablosunu kim yapmıştır?', options: ['Vincent van Gogh', 'Leonardo da Vinci', 'Pablo Picasso', 'Claude Monet'], answerIndex: 1 },
-  { prompt: 'Dünya’nın en büyük kıtası hangisidir?', options: ['Afrika', 'Avrupa', 'Asya', 'Güney Amerika'], answerIndex: 2 },
-  { prompt: 'Hangi organ vücudun en büyük organıdır?', options: ['Karaciğer', 'Deri', 'Akciğer', 'Kalp'], answerIndex: 1 },
-  { prompt: 'İnsan vücudunda yetişkinlerde normalde kaç kemik bulunur?', options: ['106', '206', '306', '406'], answerIndex: 1 },
-  { prompt: 'Elektrik akımının birimi nedir?', options: ['Volt', 'Watt', 'Amper', 'Ohm'], answerIndex: 2 },
-  { prompt: 'Hangi gezegen halkalarıyla en çok tanınır?', options: ['Mars', 'Satürn', 'Merkür', 'Venüs'], answerIndex: 1 },
-  { prompt: 'Nil Nehri hangi kıtadadır?', options: ['Asya', 'Avrupa', 'Afrika', 'Güney Amerika'], answerIndex: 2 },
-  { prompt: 'Fransa’nın başkenti neresidir?', options: ['Lyon', 'Marsilya', 'Paris', 'Nice'], answerIndex: 2 },
-  { prompt: '“Romeo ve Juliet” eserini kim yazmıştır?', options: ['Charles Dickens', 'William Shakespeare', 'Victor Hugo', 'Jane Austen'], answerIndex: 1 },
-  { prompt: 'Birleşmiş Milletler’in merkezi hangi şehirdedir?', options: ['Cenevre', 'New York', 'Paris', 'Brüksel'], answerIndex: 1 },
-  { prompt: 'Hangi metal oda sıcaklığında sıvıdır?', options: ['Demir', 'Bakır', 'Cıva', 'Alüminyum'], answerIndex: 2 },
-  { prompt: 'Arıların çiçeklerden topladığı ve bal yapımında kullandığı tatlı sıvı nedir?', options: ['Nektar', 'Reçine', 'Lateks', 'Özsu'], answerIndex: 0 },
-  { prompt: 'Türkiye’nin en uzun nehri hangisidir?', options: ['Fırat', 'Kızılırmak', 'Sakarya', 'Dicle'], answerIndex: 1 },
-  { prompt: 'Hangi spor dalında “grand slam” turnuvaları düzenlenir?', options: ['Tenis', 'Basketbol', 'Voleybol', 'Yüzme'], answerIndex: 0 },
-  { prompt: 'Bir futbol takımında sahada aynı anda kaç oyuncu bulunur?', options: ['9', '10', '11', '12'], answerIndex: 2 },
-  { prompt: 'Oksijenin kimyasal simgesi nedir?', options: ['Ox', 'O', 'Og', 'Oe'], answerIndex: 1 },
-  { prompt: 'Hangi ülke piramitleriyle ünlüdür?', options: ['Mısır', 'Norveç', 'Kanada', 'Portekiz'], answerIndex: 0 },
-  { prompt: 'Dünya’nın kendi ekseni etrafında dönmesi yaklaşık ne kadar sürer?', options: ['12 saat', '24 saat', '30 gün', '365 gün'], answerIndex: 1 },
-  { prompt: 'Fotosentez yapan canlılarda yeşil rengi veren pigment hangisidir?', options: ['Hemoglobin', 'Melanin', 'Klorofil', 'Keratin'], answerIndex: 2 },
-  { prompt: 'İspanya’nın başkenti neresidir?', options: ['Barselona', 'Sevilla', 'Madrid', 'Valensiya'], answerIndex: 2 },
-  { prompt: 'Hangi kıta tamamen Güney Yarımküre’de yer alır?', options: ['Avrupa', 'Antarktika', 'Kuzey Amerika', 'Asya'], answerIndex: 1 },
-  { prompt: 'Dünya’nın en sert doğal minerali hangisidir?', options: ['Kuvars', 'Elmas', 'Topaz', 'Safir'], answerIndex: 1 },
-  { prompt: '“Sefiller” romanının yazarı kimdir?', options: ['Victor Hugo', 'Émile Zola', 'Albert Camus', 'Jules Verne'], answerIndex: 0 },
-  { prompt: 'Hangi deniz Türkiye’nin kuzeyinde bulunur?', options: ['Akdeniz', 'Ege Denizi', 'Karadeniz', 'Kızıldeniz'], answerIndex: 2 },
-  { prompt: 'İnsanlarda solunum için temel organ hangisidir?', options: ['Böbrek', 'Akciğer', 'Dalak', 'Pankreas'], answerIndex: 1 },
-  { prompt: 'Hangi gezegen Güneş’e en yakındır?', options: ['Venüs', 'Dünya', 'Merkür', 'Mars'], answerIndex: 2 },
-  { prompt: 'Kanada’nın başkenti neresidir?', options: ['Toronto', 'Vancouver', 'Ottawa', 'Montreal'], answerIndex: 2 },
-  { prompt: 'Bir kilogram kaç gramdır?', options: ['10', '100', '1.000', '10.000'], answerIndex: 2 },
-  { prompt: 'Hangi hayvan memeli olmasına rağmen yumurtlar?', options: ['Yarasa', 'Ornitorenk', 'Yunus', 'Koala'], answerIndex: 1 },
-  { prompt: 'Türkiye’nin güneyinde hangi deniz bulunur?', options: ['Karadeniz', 'Marmara Denizi', 'Akdeniz', 'Baltık Denizi'], answerIndex: 2 },
-  { prompt: 'Işık yılı neyi ölçmek için kullanılır?', options: ['Zamanı', 'Uzaklığı', 'Parlaklığı', 'Sıcaklığı'], answerIndex: 1 },
-  { prompt: 'Hangi enstrümanın genellikle 88 tuşu vardır?', options: ['Keman', 'Piyano', 'Flüt', 'Trompet'], answerIndex: 1 },
-  { prompt: 'Brezilya’da en yaygın konuşulan dil hangisidir?', options: ['İspanyolca', 'Portekizce', 'Fransızca', 'İngilizce'], answerIndex: 1 },
-  { prompt: 'Dünyanın en yüksek dağı hangisidir?', options: ['K2', 'Kilimanjaro', 'Everest', 'Mont Blanc'], answerIndex: 2 },
-  { prompt: 'Hangi vitamin güneş ışığı etkisiyle vücutta üretilebilir?', options: ['A vitamini', 'B12 vitamini', 'C vitamini', 'D vitamini'], answerIndex: 3 },
-  { prompt: 'Hangi bilim dalı depremleri inceler?', options: ['Meteoroloji', 'Sismoloji', 'Astronomi', 'Ekoloji'], answerIndex: 1 },
-  { prompt: 'Mısır’ın ünlü antik heykeli Büyük Sfenks hangi şehir yakınındadır?', options: ['Gize', 'İskenderiye', 'Luksor', 'Asvan'], answerIndex: 0 },
-  { prompt: 'Hangi okyanus Afrika ile Avustralya arasında yer alır?', options: ['Atlas Okyanusu', 'Hint Okyanusu', 'Arktik Okyanusu', 'Güney Okyanusu'], answerIndex: 1 },
-];
-
-function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
-  const pool = [...TURKISH_TRIVIA_QUESTIONS];
-  for (let index = pool.length - 1; index > 0; index -= 1) {
-    const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1);
-    ;[pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
-  }
-
-  // Havuzdaki tüm soruları rastgele sıraya koy; aynı oyun içinde soru tekrarlanmasın.
-  return pool.map((question) => {
-    const options = [...question.options];
-    const correct = options[question.answerIndex];
-    for (let index = options.length - 1; index > 0; index -= 1) {
-      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1);
-      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]];
-    }
-    return { prompt: question.prompt, options, answerIndex: options.indexOf(correct) };
-  });
-}
-
 async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
-  // Her oyunda canlı kaynaktan yeni sorular al; hazır Türkçe havuzu da ilk kullanım için ekle.
-  const fallbackQuestions = shuffledTurkishTriviaQuestions()
-  try {
-    const response = await fetch('https://the-trivia-api.com/v2/questions?limit=50&categories=general_knowledge', {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!response.ok) throw new Error('Trivia API request failed')
-    const payload = await response.json() as TriviaApiQuestion[]
-    if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
-    const questions = payload.flatMap((item): TriviaQuestion[] => {
-      const prompt = item.question?.text?.trim()
-      const correct = item.correctAnswer?.trim()
-      const incorrect = item.incorrectAnswers
-      if (!prompt || !correct || !Array.isArray(incorrect) || incorrect.length < 3) return []
-      const options = [correct, ...incorrect.slice(0, 3)]
-      for (let index = options.length - 1; index > 0; index -= 1) {
-        const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
-        ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
-      }
-      return [{ prompt, options, answerIndex: options.indexOf(correct) }]
-    })
-    if (questions.length < 10) throw new Error('Trivia API returned too few questions')
-    const translated = await Promise.all(questions.map((question) => translateQuestionToTurkish(question)))
-    return [...translated, ...fallbackQuestions]
-  } catch (error) {
-    console.warn('Canlı genel kültür soruları alınamadı; hazır Türkçe sorular kullanılacak:', error)
-    return fallbackQuestions
-  }
+  // Her oyun için canlı kaynaktan soru al; sabit ve sınırlı bir yerel soru havuzu kullanma.
+  const response = await fetch('https://the-trivia-api.com/v2/questions?limit=50&categories=general_knowledge', {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!response.ok) throw new Error(`Trivia API request failed (HTTP ${response.status})`)
+  const payload = await response.json() as TriviaApiQuestion[]
+  if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
+
+  const questions = payload.flatMap((item): TriviaQuestion[] => {
+    const prompt = item.question?.text?.trim()
+    const correct = item.correctAnswer?.trim()
+    const incorrect = item.incorrectAnswers
+    if (!prompt || !correct || !Array.isArray(incorrect) || incorrect.length < 3) return []
+    const options = [correct, ...incorrect.slice(0, 3)]
+    for (let index = options.length - 1; index > 0; index -= 1) {
+      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
+      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
+    }
+    return [{ prompt, options, answerIndex: options.indexOf(correct) }]
+  })
+  if (questions.length < 10) throw new Error('Trivia API returned too few questions')
+
+  const translated = await Promise.all(questions.map(async (question) => {
+    try {
+      return await translateQuestionToTurkish(question)
+    } catch (error) {
+      console.warn('Bir genel kültür sorusu Türkçeye çevrilemedi:', error)
+      return null
+    }
+  }))
+  const usable = translated.filter((question): question is TriviaQuestion => question !== null)
+  if (usable.length === 0) throw new Error('No trivia questions could be translated')
+  return usable
 }
 
 function corsHeaders(origin: string) {

@@ -25,7 +25,7 @@ export type ClientMessage =
   | { type: 'create'; nickname: string; gameId: GameId }
   | { type: 'join'; nickname: string; resumeToken?: string }
   | { type: 'start_game' }
-  | { type: 'submit_answer'; answerIndex: number }
+  | { type: 'submit_answer'; answerIndex: number; questionIndex: number }
   | { type: 'leave' }
   | { type: 'ping' }
 
@@ -61,7 +61,7 @@ export function parseClientMessage(data: string | ArrayBuffer): ClientMessage | 
       : { type: 'join', nickname: message.nickname, resumeToken: message.resumeToken }
   }
   if (message.type === 'start_game' && Object.keys(message).length === 1) return { type: 'start_game' }
-  if (message.type === 'submit_answer' && Object.keys(message).length === 2 && Number.isInteger(message.answerIndex) && (message.answerIndex as number) >= 0 && (message.answerIndex as number) <= 3) return { type: 'submit_answer', answerIndex: message.answerIndex as number }
+  if (message.type === 'submit_answer' && Object.keys(message).length === 3 && Number.isInteger(message.answerIndex) && (message.answerIndex as number) >= 0 && (message.answerIndex as number) <= 3 && Number.isInteger(message.questionIndex) && (message.questionIndex as number) >= 0) return { type: 'submit_answer', answerIndex: message.answerIndex as number, questionIndex: message.questionIndex as number }
   if ((message.type === 'leave' || message.type === 'ping') && Object.keys(message).length === 1) return { type: message.type }
   return null
 }

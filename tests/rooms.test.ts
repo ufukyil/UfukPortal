@@ -160,6 +160,37 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
     expect(await sendAndRead(unauthorized, { type: 'set_owner', owner: true })).toEqual({ type: 'error', code: 'invalid_message' })
   })
 
+  it('Genel Kültür oyununu başlatır, cevapları puanlar ve soruyu eş zamanlı ilerletir', async () => {
+    const owner = await openSocket('/api/rooms/create')
+    const ownerWelcome = await sendAndRead(owner, { type: 'create', nickname: 'Ev Sahibi', gameId: 'trivia' })
+    const roomCode = (ownerWelcome.room as { code: string }).code
+    const guest = await openSocket(`/api/rooms/${roomCode}`)
+    const ownerJoinUpdate = nextMessage(owner)
+    await sendAndRead(guest, { type: 'join', nickname: 'Misafir' })
+    await ownerJoinUpdate
+
+    const ownerStartUpdate = nextMessage(owner)
+    const guestStartUpdate = nextMessage(guest)
+    owner.send(JSON.stringify({ type: 'start_game' }))
+    const [ownerStarted, guestStarted] = await Promise.all([ownerStartUpdate, guestStartUpdate])
+    expect((ownerStarted.room as { trivia: { status: string; questionIndex: number } }).trivia).toMatchObject({ status: 'playing', questionIndex: 0 })
+    expect((guestStarted.room as { trivia: { question: { prompt: string } } }).trivia.question.prompt).toContain('hangi yıl')
+
+    const ownerAnswerUpdate = nextMessage(owner)
+    const guestAnswerUpdate = nextMessage(guest)
+    owner.send(JSON.stringify({ type: 'submit_answer', answerIndex: 1 }))
+    const [ownerScored, guestScored] = await Promise.all([ownerAnswerUpdate, guestAnswerUpdate])
+    expect((ownerScored.room as { trivia: { scores: { nickname: string; score: number }[] } }).trivia.scores.find((item) => item.nickname === 'Ev Sahibi')?.score).toBe(10)
+    expect((guestScored.room as { trivia: { answeredPlayerIds: string[] } }).trivia.answeredPlayerIds).toHaveLength(1)
+
+    const ownerNextUpdate = nextMessage(owner)
+    const guestNextUpdate = nextMessage(guest)
+    guest.send(JSON.stringify({ type: 'submit_answer', answerIndex: 0 }))
+    const [ownerNext, guestNext] = await Promise.all([ownerNextUpdate, guestNextUpdate])
+    expect((ownerNext.room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
+    expect((guestNext.room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
+  })
+
   it('reddeder origin dışı bağlantıları', async () => {
     const response = await exports.default.fetch(new Request('https://portal.test/api/health', { headers: { Origin: 'https://attacker.invalid' } }))
     expect(response.status).toBe(403)

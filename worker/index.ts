@@ -29,6 +29,7 @@ const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
 
 type TriviaApiQuestion = {
+  id?: string
   question?: { text?: string }
   correctAnswer?: string
   incorrectAnswers?: string[]
@@ -53,7 +54,9 @@ async function translateQuestionToTurkish(question: TriviaQuestion): Promise<Tri
   return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
 }
 
-async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
+type TriviaCandidate = TriviaQuestion & { sourceId?: string }
+
+async function fetchTriviaQuestions(): Promise<TriviaCandidate[]> {
   // Her oyun için canlı kaynaktan soru al; sabit ve sınırlı bir yerel soru havuzu kullanma.
   const response = await fetch('https://the-trivia-api.com/v2/questions?limit=50&categories=general_knowledge', {
     headers: { Accept: 'application/json' },
@@ -73,7 +76,7 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
       const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
       ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
     }
-    return [{ prompt, options, answerIndex: options.indexOf(correct) }]
+    return [{ prompt, options, answerIndex: options.indexOf(correct), ...(item.id ? { sourceId: item.id } : {}) }]
   })
   if (questions.length < 10) throw new Error('Trivia API returned too few questions')
 
@@ -165,33 +168,45 @@ export class RoomDurableObject extends DurableObject<Env> {
       if (request.method !== 'POST' || new URL(request.url).pathname !== '/trivia/reserve') {
         return Response.json({ error: 'invalid_request' }, { status: 400 })
       }
-      let candidates: TriviaQuestion[]
+      let candidates: TriviaCandidate[]
       try {
         const value = await request.json() as unknown
         if (!Array.isArray(value) || value.some((item) => !item || typeof item !== 'object' ||
-          typeof (item as TriviaQuestion).prompt !== 'string' || !Array.isArray((item as TriviaQuestion).options) ||
-          (item as TriviaQuestion).options.length !== 4 || !Number.isInteger((item as TriviaQuestion).answerIndex))) {
+          typeof (item as TriviaCandidate).prompt !== 'string' || !Array.isArray((item as TriviaCandidate).options) ||
+          (item as TriviaCandidate).options.length !== 4 || !Number.isInteger((item as TriviaCandidate).answerIndex) ||
+          ((item as TriviaCandidate).sourceId !== undefined && typeof (item as TriviaCandidate).sourceId !== 'string'))) {
           return Response.json({ error: 'invalid_questions' }, { status: 400 })
         }
-        candidates = value as TriviaQuestion[]
+        candidates = value as TriviaCandidate[]
       } catch {
         return Response.json({ error: 'invalid_questions' }, { status: 400 })
       }
       const keyedCandidates = await Promise.all(candidates.map(async (question) => {
         const normalized = question.prompt.normalize('NFKC').toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
         if (!normalized) return null
-        const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
-        const key = `trivia-used:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
-        return { question, key }
+        const promptDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
+        const keys = [`trivia-used:prompt:${Array.from(new Uint8Array(promptDigest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`]
+        if (question.sourceId) {
+          const sourceDigest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(question.sourceId))
+          keys.push(`trivia-used:source:${Array.from(new Uint8Array(sourceDigest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`)
+        }
+        return { question, keys }
       }))
       const selected = await this.ctx.storage.transaction(async (transaction) => {
-        const result: TriviaQuestion[] = []
+        const result: TriviaCandidate[] = []
         const seen = new Set<string>()
         for (const item of keyedCandidates) {
-          if (!item || seen.has(item.key) || await transaction.get<boolean>(item.key)) continue
-          seen.add(item.key)
+          if (!item || item.keys.some((key) => seen.has(key))) continue
+          let alreadyUsed = false
+          for (const key of item.keys) {
+            if (await transaction.get<boolean>(key)) alreadyUsed = true
+          }
+          if (alreadyUsed) continue
           result.push(item.question)
-          await transaction.put(item.key, true)
+          for (const key of item.keys) {
+            seen.add(key)
+            await transaction.put(key, true)
+          }
         }
         return result
       })

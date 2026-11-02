@@ -132,6 +132,41 @@ export class RoomDurableObject extends DurableObject<Env> {
       socket.close(1000, 'left')
       return
     }
+
+    // Odaya katılmış oyuncular oyun komutlarını gönderebilir.
+    if (message.type === 'start_game' || message.type === 'submit_answer') {
+      if (!attachment.playerId) return this.reject(socket, 'already_joined')
+      const current = this.restoreRoom(attachment.roomCode)
+      if (!current || !current.players.some((player) => player.id === attachment.playerId && player.connected)) return this.reject(socket, 'room_not_found')
+      if (current.gameId !== 'trivia') return this.reject(socket, 'invalid_message')
+      if (message.type === 'start_game') {
+        if (attachment.playerId !== current.ownerId) return this.reject(socket, 'unauthorized_action')
+        if (current.trivia.status !== 'lobby') return this.reject(socket, 'game_already_started')
+        this.room = { ...current, trivia: { ...current.trivia, status: 'playing', questionIndex: 0, answered: [] } }
+      } else {
+        if (current.trivia.status !== 'playing') return this.reject(socket, 'game_not_playing')
+        if (current.trivia.answered.includes(attachment.playerId)) return this.reject(socket, 'already_answered')
+        const question = (await import('./room-model')).TRIVIA_QUESTIONS[current.trivia.questionIndex]
+        const correct = message.answerIndex === question.answerIndex
+        const scores = { ...current.trivia.scores, [attachment.playerId]: (current.trivia.scores[attachment.playerId] ?? 0) + (correct ? 10 : 0) }
+        const answered = [...current.trivia.answered, attachment.playerId]
+        const activePlayers = current.players.filter((player) => player.connected).map((player) => player.id)
+        const allAnswered = activePlayers.length > 0 && activePlayers.every((id) => answered.includes(id))
+        let questionIndex = current.trivia.questionIndex
+        let status = current.trivia.status
+        let nextAnswered = answered
+        if (allAnswered) {
+          questionIndex += 1
+          nextAnswered = []
+          if (questionIndex >= (await import('./room-model')).TRIVIA_QUESTIONS.length) status = 'finished'
+        }
+        this.room = { ...current, trivia: { status, questionIndex, scores, answered: nextAnswered } }
+      }
+      this.attachRoomToSockets()
+      this.broadcast({ type: 'room_update', room: publicRoom(this.room) })
+      return
+    }
+
     if (attachment.playerId) return this.reject(socket, 'already_joined')
 
     const nickname = normalizeNickname(message.nickname)

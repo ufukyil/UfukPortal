@@ -185,7 +185,7 @@ export function useRoomConnection() {
     connect(options, Boolean(room))
   }, [connect, room])
 
-  const sendGameCommand = useCallback((message: { type: 'start_game' } | { type: 'submit_answer'; answerIndex: number }) => {
+  const sendGameCommand = useCallback((message: { type: 'start_game' } | { type: 'submit_answer'; answerIndex: number; questionIndex: number }) => {
     const socket = socketRef.current
     if (!socket || socket.readyState !== WebSocket.OPEN || status !== 'connected') {
       setError('Oyun komutu gönderilemedi. Bağlantını kontrol et.')
@@ -196,7 +196,11 @@ export function useRoomConnection() {
   }, [status])
 
   const startGame = useCallback(() => sendGameCommand({ type: 'start_game' }), [sendGameCommand])
-  const submitAnswer = useCallback((answerIndex: number) => sendGameCommand({ type: 'submit_answer', answerIndex }), [sendGameCommand])
+  const submitAnswer = useCallback((answerIndex: number) => {
+    const questionIndex = roomRef.current?.trivia.questionIndex
+    if (questionIndex === undefined) return false
+    return sendGameCommand({ type: 'submit_answer', answerIndex, questionIndex })
+  }, [sendGameCommand])
 
   useEffect(() => () => {
     activeRef.current = false

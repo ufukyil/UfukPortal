@@ -1,6 +1,6 @@
 # UfukPortal — Online Oyun Salonu
 
-React + TypeScript + Vite arayüzü ve ayrı bir Cloudflare Worker üzerinde çalışan gerçek zamanlı oda altyapısı. Sessiz Sinema, Genel Kültür ve Film Tahmin Etmece için oda oluşturma ve oda koduyla katılma desteklenir. Oyun başlatma, tur ve puanlama bu aşamanın kapsamında değildir.
+React + TypeScript + Vite arayüzü ve ayrı bir Cloudflare Worker üzerinde çalışan gerçek zamanlı oda altyapısı. Sessiz Sinema, Genel Kültür ve Film Tahmin Etmece için oda oluşturma ve oda koduyla katılma desteklenir. Genel Kültür oyununda oda sahibi oyunu başlatabilir; 10 soru, eş zamanlı cevap toplama, doğru cevap başına 10 puan ve sonuç tablosu vardır. Diğer iki oyunun tur ve puanlama akışları henüz eklenmemiştir.
 
 ## Gereksinimler
 
@@ -54,7 +54,7 @@ Wrangler türlerini yapılandırmadan yeniden üretmek için `npm run cf:types` 
 - Oda kodları sunucuda kriptografik rastgelelikle 6 karakter üretilir. İstemciden sahiplik veya oyuncu listesi kabul edilmez.
 - Mesajlar JSON şeması, izin verilen işlem türleri ve 2 KiB boyut sınırıyla doğrulanır. WebSocket Origin değeri `ALLOWED_ORIGINS` listesinde tam eşleşmelidir.
 - Yeniden bağlanma bileti sunucu tarafından HMAC ile imzalanır ve yalnızca sekmenin `sessionStorage` alanında tutulur. Bağlantı 30 saniye içinde yeniden kurulabilir. Son oyuncu bağlantısı kesilince oda bellekte bu süre kadar tutulur; süre dolunca temizlenir. Açık bağlantısı olan odalarda bağlantı ekleri, oda durumu dışında kalıcı bir kullanıcı verisi oluşturmaz.
-- Kullanıcı hesabı, kalıcı kullanıcı veritabanı ve oyun başlatma/puanlama yoktur.
+- Kullanıcı hesabı ve kalıcı kullanıcı veritabanı yoktur. Genel Kültür oyun durumu oda belleğinde tutulur; oda kapanırsa oyun ilerlemesi kalıcı değildir.
 
 ## Yapılandırma ve yayın
 
@@ -77,4 +77,4 @@ Kaynaklar: [Workers limitleri](https://developers.cloudflare.com/workers/platfor
 
 ## Aşama kapsamı dışı
 
-Oyun turu, soru API'si, puanlama, kullanıcı hesabı, kalıcı oyuncu verisi ve production dağıtımı eklenmedi. Production ayarları hesap ve Pages URL'si gerektirdiğinden bu ortamda doğrulanmadı.
+Sessiz Sinema ve Film Tahmin Etmece oyun turu/puanlama, kullanıcı hesabı ve kalıcı oyuncu verisi henüz eklenmedi. Production dağıtımı bu geliştirme dalında yapılmadı; birleştirme öncesinde test ve derleme doğrulanmalıdır.

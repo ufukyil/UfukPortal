@@ -185,6 +185,10 @@ export class RoomDurableObject extends DurableObject<Env> {
         this.room = { ...latest, trivia: { ...latest.trivia, status: 'playing', questionIndex: 0, questions, answered: [] } }
       } else {
         if (current.trivia.status !== 'playing') return this.reject(socket, 'game_not_playing')
+        if (message.questionIndex !== current.trivia.questionIndex) {
+          socket.send(JSON.stringify({ type: 'room_update', room: publicRoom(current) }))
+          return
+        }
         if (current.trivia.answered.includes(attachment.playerId)) return this.reject(socket, 'already_answered')
         const question = current.trivia.questions[current.trivia.questionIndex]
         if (!question) return this.reject(socket, 'game_not_playing')

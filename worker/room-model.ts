@@ -96,7 +96,7 @@ export function addPlayer(room: RoomState | null, nickname: string, playerId: st
   const current = pruneDisconnected(room, now)
   if (current.players.some((player) => player.nickname.toLocaleLowerCase('tr') === nickname.toLocaleLowerCase('tr'))) return { room: current, error: 'nickname_taken' }
   if (current.players.length >= MAX_PLAYERS) return { room: current, error: 'room_full' }
-  return { room: { ...current, players: [...current.players, { id: playerId, nickname, connected: true, disconnectedAt: null }] }, error: null }
+  return { room: { ...current, players: [...current.players, { id: playerId, nickname, connected: true, disconnectedAt: null }], trivia: { ...current.trivia, scores: { ...current.trivia.scores, [playerId]: 0 } } }, error: null }
 }
 
 export function publicRoom(room: RoomState) {

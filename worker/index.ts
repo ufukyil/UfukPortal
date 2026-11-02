@@ -154,7 +154,7 @@ export class RoomDurableObject extends DurableObject<Env> {
         const activePlayers = current.players.filter((player) => player.connected).map((player) => player.id)
         const allAnswered = activePlayers.length > 0 && activePlayers.every((id) => answered.includes(id))
         let questionIndex = current.trivia.questionIndex
-        let status = current.trivia.status
+        let status: 'playing' | 'finished' = current.trivia.status
         let nextAnswered = answered
         if (allAnswered) {
           questionIndex += 1

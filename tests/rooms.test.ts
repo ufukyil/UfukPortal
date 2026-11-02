@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { exports } from 'cloudflare:workers'
 import { addPlayer, createRoom, isValidRoomCode, parseClientMessage, publicRoom } from '../worker/room-model'
 
@@ -160,7 +160,17 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
     expect(await sendAndRead(unauthorized, { type: 'set_owner', owner: true })).toEqual({ type: 'error', code: 'invalid_message' })
   })
 
-  it('Genel Kültür oyununu başlatır, cevapları puanlar ve soruyu eş zamanlı ilerletir', async () => {
+  it('API sorularını yükler ve ilk doğru cevapta tüm oyuncuları ilerletir', async () => {
+    const apiQuestions = Array.from({ length: 20 }, (_, index) => ({
+      question: { text: `Dynamic question ${index}` },
+      correctAnswer: `Correct answer ${index}`,
+      incorrectAnswers: [`Wrong A ${index}`, `Wrong B ${index}`, `Wrong C ${index}`],
+    }))
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(apiQuestions), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })))
+
     const owner = await openSocket('/api/rooms/create')
     const ownerWelcome = await sendAndRead(owner, { type: 'create', nickname: 'Ev Sahibi', gameId: 'trivia' })
     const roomCode = (ownerWelcome.room as { code: string }).code
@@ -173,22 +183,26 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
     const guestStartUpdate = nextMessage(guest)
     owner.send(JSON.stringify({ type: 'start_game' }))
     const [ownerStarted, guestStarted] = await Promise.all([ownerStartUpdate, guestStartUpdate])
-    expect((ownerStarted.room as { trivia: { status: string; questionIndex: number } }).trivia).toMatchObject({ status: 'playing', questionIndex: 0 })
-    expect((guestStarted.room as { trivia: { question: { prompt: string } } }).trivia.question.prompt).toContain('hangi yıl')
+    const startedRoom = ownerStarted.room as { trivia: { status: string; questionIndex: number; question: { prompt: string; options: string[] } } }
+    expect(startedRoom.trivia).toMatchObject({ status: 'playing', questionIndex: 0 })
+    expect(startedRoom.trivia.question.prompt).toBe('Dynamic question 0')
+    expect((guestStarted.room as { trivia: { question: { prompt: string } } }).trivia.question.prompt).toBe('Dynamic question 0')
 
-    const ownerAnswerUpdate = nextMessage(owner)
-    const guestAnswerUpdate = nextMessage(guest)
-    owner.send(JSON.stringify({ type: 'submit_answer', answerIndex: 1 }))
-    const [ownerScored, guestScored] = await Promise.all([ownerAnswerUpdate, guestAnswerUpdate])
-    expect((ownerScored.room as { trivia: { scores: { nickname: string; score: number }[] } }).trivia.scores.find((item) => item.nickname === 'Ev Sahibi')?.score).toBe(10)
-    expect((guestScored.room as { trivia: { answeredPlayerIds: string[] } }).trivia.answeredPlayerIds).toHaveLength(1)
-
+    const correctIndex = startedRoom.trivia.question.options.indexOf('Correct answer 0')
     const ownerNextUpdate = nextMessage(owner)
     const guestNextUpdate = nextMessage(guest)
-    guest.send(JSON.stringify({ type: 'submit_answer', answerIndex: 0 }))
+    owner.send(JSON.stringify({ type: 'submit_answer', answerIndex: correctIndex, questionIndex: 0 }))
     const [ownerNext, guestNext] = await Promise.all([ownerNextUpdate, guestNextUpdate])
-    expect((ownerNext.room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
+    const nextRoom = ownerNext.room as { trivia: { questionIndex: number; question: { prompt: string }; scores: { nickname: string; score: number }[] } }
+    expect(nextRoom.trivia.questionIndex).toBe(1)
+    expect(nextRoom.trivia.question.prompt).toBe('Dynamic question 1')
+    expect(nextRoom.trivia.scores.find((item) => item.nickname === 'Ev Sahibi')?.score).toBe(10)
     expect((guestNext.room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
+
+    const staleAnswerUpdate = nextMessage(guest)
+    guest.send(JSON.stringify({ type: 'submit_answer', answerIndex: 0, questionIndex: 0 }))
+    expect(((await staleAnswerUpdate).room as { trivia: { questionIndex: number } }).trivia.questionIndex).toBe(1)
+    vi.unstubAllGlobals()
   })
 
   it('reddeder origin dışı bağlantıları', async () => {

@@ -167,10 +167,19 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
       correctAnswer: `Correct answer ${index}`,
       incorrectAnswers: [`Wrong A ${index}`, `Wrong B ${index}`, `Wrong C ${index}`],
     }))
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify(apiQuestions), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    })))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input))
+      if (url.hostname === 'translate.googleapis.com') {
+        return new Response(JSON.stringify([[[url.searchParams.get('q') ?? '']]]), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify(apiQuestions), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }))
 
     const owner = await openSocket('/api/rooms/create')
     const ownerWelcome = await sendAndRead(owner, { type: 'create', nickname: 'Ev Sahibi', gameId: 'trivia' })

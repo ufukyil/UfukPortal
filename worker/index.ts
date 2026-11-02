@@ -33,6 +33,25 @@ type TriviaApiQuestion = {
   incorrectAnswers?: string[]
 }
 
+async function translateQuestionToTurkish(question: TriviaQuestion): Promise<TriviaQuestion> {
+  const separator = ' UFUKPORTALOPTIONSEPARATOR '
+  const source = [question.prompt, ...question.options].join(separator)
+  const url = new URL('https://translate.googleapis.com/translate_a/single')
+  url.searchParams.set('client', 'gtx')
+  url.searchParams.set('sl', 'en')
+  url.searchParams.set('tl', 'tr')
+  url.searchParams.set('dt', 't')
+  url.searchParams.set('q', source)
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (!response.ok) throw new Error('Translation service request failed')
+  const payload = await response.json() as unknown
+  if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error('Translation service returned invalid data')
+  const translated = (payload[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '').join('')
+  const pieces = translated.split(separator)
+  if (pieces.length !== 5 || pieces.some((piece) => !piece.trim())) throw new Error('Translation response could not be separated')
+  return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
+}
+
 async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
   const response = await fetch('https://the-trivia-api.com/v2/questions?limit=20&categories=general_knowledge', {
     headers: { Accept: 'application/json' },
@@ -55,7 +74,8 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
     return [{ prompt, options, answerIndex: options.indexOf(correct) }]
   })
   if (questions.length < 10) throw new Error('Trivia API returned too few questions')
-  return questions
+
+  return Promise.all(questions.map(translateQuestionToTurkish))
 }
 
 function corsHeaders(origin: string) {

@@ -27,31 +27,6 @@ type SocketAttachment = { mode: PendingMode; roomCode: string; playerId?: string
 type TokenClaims = { version: 1; roomCode: string; playerId: string; nickname: string; expiresAt: number }
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
-type TriviaApiQuestion = {
-  question?: { text?: string }
-  correctAnswer?: string
-  incorrectAnswers?: string[]
-}
-
-async function translateQuestionToTurkish(question: TriviaQuestion): Promise<TriviaQuestion> {
-  const separator = ' UFUKPORTALOPTIONSEPARATOR '
-  const source = [question.prompt, ...question.options].join(separator)
-  const url = new URL('https://translate.googleapis.com/translate_a/single')
-  url.searchParams.set('client', 'gtx')
-  url.searchParams.set('sl', 'en')
-  url.searchParams.set('tl', 'tr')
-  url.searchParams.set('dt', 't')
-  url.searchParams.set('q', source)
-  const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-  if (!response.ok) throw new Error(`Translation service request failed (HTTP ${response.status})`)
-  const payload = await response.json() as unknown
-  if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error('Translation service returned invalid data')
-  const translated = (payload[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '').join('')
-  const pieces = translated.split(separator)
-  if (pieces.length !== 5 || pieces.some((piece) => !piece.trim())) throw new Error('Translation response could not be separated')
-  return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
-}
-
 const TURKISH_TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
   { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Mars', 'Jüpiter', 'Venüs'], answerIndex: 2 },
@@ -123,8 +98,8 @@ function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
     ;[pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
   }
 
-  // Her oyunda geniş havuzdan 20 farklı soru seç.
-  return pool.slice(0, 20).map((question) => {
+  // Havuzdaki tüm soruları rastgele sıraya koy; aynı oyun içinde soru tekrarlanmasın.
+  return pool.map((question) => {
     const options = [...question.options];
     const correct = options[question.answerIndex];
     for (let index = options.length - 1; index > 0; index -= 1) {
@@ -136,35 +111,9 @@ function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
 }
 
 async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
-  const response = await fetch('https://the-trivia-api.com/v2/questions?limit=20&categories=general_knowledge', {
-    headers: { Accept: 'application/json' },
-    signal: AbortSignal.timeout(8000),
-  })
-  if (!response.ok) throw new Error('Trivia API request failed')
-  const payload = await response.json() as TriviaApiQuestion[]
-  if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
-
-  const questions = payload.flatMap((item): TriviaQuestion[] => {
-    const prompt = item.question?.text?.trim()
-    const correct = item.correctAnswer?.trim()
-    const incorrect = item.incorrectAnswers
-    if (!prompt || !correct || !Array.isArray(incorrect) || incorrect.length < 3) return []
-    const options = [correct, ...incorrect.slice(0, 3)]
-    for (let index = options.length - 1; index > 0; index -= 1) {
-      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
-      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
-    }
-    return [{ prompt, options, answerIndex: options.indexOf(correct) }]
-  })
-  if (questions.length < 10) throw new Error('Trivia API returned too few questions')
-
-  // Çeviri servisi hata verirse İngilizce soru göstermek yerine hazır Türkçe soruları kullan.
-  try {
-    return await Promise.all(questions.map((question) => translateQuestionToTurkish(question)))
-  } catch (error) {
-    console.warn('Genel kültür soruları Türkçeye çevrilemedi; hazır Türkçe sorular kullanılacak:', error)
-    return shuffledTurkishTriviaQuestions()
-  }
+  // Sabit 20 soruluk API yanıtı yerine Türkçe soru havuzunun tamamını kullan.
+  // Havuz her oyun başında karıştırıldığı için sorular rastgele gelir ve tekrarlanmaz.
+  return shuffledTurkishTriviaQuestions()
 }
 
 function corsHeaders(origin: string) {

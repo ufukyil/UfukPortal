@@ -1,5 +1,13 @@
 export type RoomPlayer = { id: string; nickname: string; connected: boolean; isOwner: boolean }
-export type RoomSnapshot = { code: string; gameId: string; players: RoomPlayer[] }
+export type TriviaSnapshot = {
+  status: 'lobby' | 'playing' | 'finished'
+  questionIndex: number
+  question: { prompt: string; options: string[] } | null
+  scores: { playerId: string; nickname: string; score: number }[]
+  answeredPlayerIds: string[]
+  totalQuestions: number
+}
+export type RoomSnapshot = { code: string; gameId: string; players: RoomPlayer[]; trivia: TriviaSnapshot }
 export type RoomStatus = 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'error'
 export type ConnectOptions = { mode: 'create'; nickname: string; gameId: string } | { mode: 'join'; nickname: string; code: string; resumeToken?: string }
 

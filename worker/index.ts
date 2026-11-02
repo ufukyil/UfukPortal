@@ -27,6 +27,32 @@ type SocketAttachment = { mode: PendingMode; roomCode: string; playerId?: string
 type TokenClaims = { version: 1; roomCode: string; playerId: string; nickname: string; expiresAt: number }
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
 
+
+type TriviaApiQuestion = {
+  question?: { text?: string }
+  correctAnswer?: string
+  incorrectAnswers?: string[]
+}
+
+async function translateQuestionToTurkish(question: TriviaQuestion): Promise<TriviaQuestion> {
+  const separator = ' UFUKPORTALOPTIONSEPARATOR '
+  const source = [question.prompt, ...question.options].join(separator)
+  const url = new URL('https://translate.googleapis.com/translate_a/single')
+  url.searchParams.set('client', 'gtx')
+  url.searchParams.set('sl', 'en')
+  url.searchParams.set('tl', 'tr')
+  url.searchParams.set('dt', 't')
+  url.searchParams.set('q', source)
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (!response.ok) throw new Error(`Translation service request failed (HTTP ${response.status})`)
+  const payload = await response.json() as unknown
+  if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error('Translation service returned invalid data')
+  const translated = (payload[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '').join('')
+  const pieces = translated.split(separator)
+  if (pieces.length !== 5 || pieces.some((piece) => !piece.trim())) throw new Error('Translation response could not be separated')
+  return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
+}
+
 const TURKISH_TRIVIA_QUESTIONS: TriviaQuestion[] = [
   { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
   { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Mars', 'Jüpiter', 'Venüs'], answerIndex: 2 },
@@ -111,9 +137,35 @@ function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
 }
 
 async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
-  // Sabit 20 soruluk API yanıtı yerine Türkçe soru havuzunun tamamını kullan.
-  // Havuz her oyun başında karıştırıldığı için sorular rastgele gelir ve tekrarlanmaz.
-  return shuffledTurkishTriviaQuestions()
+  // Her oyunda canlı kaynaktan yeni sorular al; hazır Türkçe havuzu da ilk kullanım için ekle.
+  const fallbackQuestions = shuffledTurkishTriviaQuestions()
+  try {
+    const response = await fetch('https://the-trivia-api.com/v2/questions?limit=50&categories=general_knowledge', {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!response.ok) throw new Error('Trivia API request failed')
+    const payload = await response.json() as TriviaApiQuestion[]
+    if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
+    const questions = payload.flatMap((item): TriviaQuestion[] => {
+      const prompt = item.question?.text?.trim()
+      const correct = item.correctAnswer?.trim()
+      const incorrect = item.incorrectAnswers
+      if (!prompt || !correct || !Array.isArray(incorrect) || incorrect.length < 3) return []
+      const options = [correct, ...incorrect.slice(0, 3)]
+      for (let index = options.length - 1; index > 0; index -= 1) {
+        const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
+        ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
+      }
+      return [{ prompt, options, answerIndex: options.indexOf(correct) }]
+    })
+    if (questions.length < 10) throw new Error('Trivia API returned too few questions')
+    const translated = await Promise.all(questions.map((question) => translateQuestionToTurkish(question)))
+    return [...translated, ...fallbackQuestions]
+  } catch (error) {
+    console.warn('Canlı genel kültür soruları alınamadı; hazır Türkçe sorular kullanılacak:', error)
+    return fallbackQuestions
+  }
 }
 
 function corsHeaders(origin: string) {
@@ -187,6 +239,39 @@ export class RoomDurableObject extends DurableObject<Env> {
 
   async fetch(request: Request): Promise<Response> {
     const mode = request.headers.get('X-Ufuk-Room-Action')
+    if (mode === 'reserve_trivia_questions') {
+      if (request.method !== 'POST' || new URL(request.url).pathname !== '/trivia/reserve') {
+        return Response.json({ error: 'invalid_request' }, { status: 400 })
+      }
+      let candidates: TriviaQuestion[]
+      try {
+        const value = await request.json() as unknown
+        if (!Array.isArray(value) || value.some((item) => !item || typeof item !== 'object' ||
+          typeof (item as TriviaQuestion).prompt !== 'string' || !Array.isArray((item as TriviaQuestion).options) ||
+          (item as TriviaQuestion).options.length !== 4 || !Number.isInteger((item as TriviaQuestion).answerIndex))) {
+          return Response.json({ error: 'invalid_questions' }, { status: 400 })
+        }
+        candidates = value as TriviaQuestion[]
+      } catch {
+        return Response.json({ error: 'invalid_questions' }, { status: 400 })
+      }
+      const selected = await this.ctx.storage.transaction(async (transaction) => {
+        const result: TriviaQuestion[] = []
+        const seen = new Set<string>()
+        for (const question of candidates) {
+          const normalized = question.prompt.normalize('NFKC').toLocaleLowerCase('tr').replace(/[^\\p{L}\\p{N}]+/gu, ' ').trim()
+          if (!normalized) continue
+          const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized))
+          const key = `trivia-used:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')}`
+          if (seen.has(key) || await transaction.get<boolean>(key)) continue
+          seen.add(key)
+          result.push(question)
+          await transaction.put(key, true)
+        }
+        return result
+      })
+      return Response.json({ questions: selected })
+    }
     const code = request.headers.get('X-Ufuk-Room-Code')
     const origin = request.headers.get('X-Ufuk-Verified-Origin')
     if (mode !== 'create' && mode !== 'join' || !code || !isValidRoomCode(code) || !origin) {
@@ -234,7 +319,17 @@ export class RoomDurableObject extends DurableObject<Env> {
         if (current.trivia.status !== 'lobby') return this.reject(socket, 'game_already_started')
         let questions: TriviaQuestion[]
         try {
-          questions = await fetchTriviaQuestions()
+          const candidates = await fetchTriviaQuestions()
+          const history = this.env.ROOMS.get(this.env.ROOMS.idFromName('GLOBAL_TRIVIA_HISTORY'))
+          const reserved = await history.fetch(new Request('https://room.internal/trivia/reserve', {
+            method: 'POST',
+            headers: { 'X-Ufuk-Room-Action': 'reserve_trivia_questions', 'Content-Type': 'application/json' },
+            body: JSON.stringify(candidates),
+          }))
+          if (!reserved.ok) throw new Error('Trivia history could not be updated')
+          const result = await reserved.json() as { questions?: TriviaQuestion[] }
+          questions = result.questions ?? []
+          if (questions.length === 0) return this.reject(socket, 'no_new_questions_available')
         } catch (error) {
           console.error('Genel kültür soru yükleme hatası:', error)
           return this.reject(socket, 'question_source_unavailable')

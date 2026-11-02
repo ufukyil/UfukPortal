@@ -65,7 +65,7 @@ export function RoomScreen({ game, room, playerId, status, error, onCreate, onJo
         </section>
         {room.gameId === 'trivia' && <section className="trivia-game" aria-live="polite">
           {room.trivia.status === 'lobby' && <>
-            <div className="trivia-intro"><span>💡</span><div><b>Genel Kültür hazır!</b><p>10 soru, her doğru cevap 10 puan. Herkes cevaplayınca sonraki soru açılır.</p></div></div>
+            <div className="trivia-intro"><span>💡</span><div><b>Genel Kültür hazır!</b><p>Sorular oyun başlarken internetten alınır. İlk doğru cevap 10 puan kazandırır ve herkesi sonraki soruya geçirir.</p></div></div>
             {room.players.find((player) => player.id === playerId)?.isOwner
               ? <button className="primary-button trivia-start" onClick={onStartGame}>Oyunu Başlat <span>→</span></button>
               : <p className="trivia-waiting">Oda sahibinin oyunu başlatması bekleniyor…</p>}
@@ -77,7 +77,7 @@ export function RoomScreen({ game, room, playerId, status, error, onCreate, onJo
               const alreadyAnswered = room.trivia.answeredPlayerIds.includes(playerId)
               return <button key={option} disabled={alreadyAnswered || status !== 'connected'} onClick={() => onSubmitAnswer(index)}>{String.fromCharCode(65 + index)}. {option}</button>
             })}</div>
-            {room.trivia.answeredPlayerIds.includes(playerId) && <p className="trivia-waiting">Cevabın alındı. Diğer oyuncular bekleniyor…</p>}
+            {room.trivia.answeredPlayerIds.includes(playerId) && <p className="trivia-waiting">Cevabın alındı. İlk doğru cevapta sonraki soru açılacak…</p>}
           </>}
           {room.trivia.status === 'finished' && <div className="trivia-results"><span>🏆</span><h2>Yarışma bitti!</h2><p>İşte final puanları</p></div>}
           {(room.trivia.status === 'playing' || room.trivia.status === 'finished') && <div className="trivia-scores"><h3>{room.trivia.status === 'finished' ? 'Sonuç tablosu' : 'Puan durumu'}</h3>{[...room.trivia.scores].sort((a, b) => b.score - a.score).map((score, index) => <div key={score.playerId}><span>{index + 1}. {score.nickname}</span><b>{score.score} puan</b></div>)}</div>}

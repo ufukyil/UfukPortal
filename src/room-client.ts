@@ -31,6 +31,7 @@ export function roomErrorMessage(code: string): string {
     unauthorized_action: 'Oyunu yalnızca oda sahibi başlatabilir.',
     game_already_started: 'Oyun zaten başlatılmış.',
     game_not_playing: 'Şu anda cevap gönderilebilecek bir oyun yok.',
+    question_source_unavailable: 'Sorular internetten alınamadı. Biraz sonra tekrar oyunu başlatmayı dene.',
     already_answered: 'Bu soruyu zaten cevapladın.',
     session_expired: 'Oturumun sona erdi. Odaya takma adınla yeniden katıl.',
     already_connected: 'Bu oyuncu zaten bağlı.',

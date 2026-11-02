@@ -10,7 +10,7 @@ import {
   parseClientMessage,
   pruneDisconnected,
   publicRoom,
-  TRIVIA_QUESTIONS,
+  type TriviaQuestion,
   ROOM_CODE_ALPHABET,
   type RoomPlayer,
   type RoomState,
@@ -26,6 +26,57 @@ type PendingMode = 'create' | 'join'
 type SocketAttachment = { mode: PendingMode; roomCode: string; playerId?: string; room?: RoomState }
 type TokenClaims = { version: 1; roomCode: string; playerId: string; nickname: string; expiresAt: number }
 const TOKEN_TTL_MS = 24 * 60 * 60 * 1000
+
+type TriviaApiQuestion = {
+  question?: { text?: string }
+  correctAnswer?: string
+  incorrectAnswers?: string[]
+}
+
+async function translateQuestionToTurkish(question: TriviaQuestion): Promise<TriviaQuestion> {
+  const separator = ' UFUKPORTALOPTIONSEPARATOR '
+  const source = [question.prompt, ...question.options].join(separator)
+  const url = new URL('https://translate.googleapis.com/translate_a/single')
+  url.searchParams.set('client', 'gtx')
+  url.searchParams.set('sl', 'en')
+  url.searchParams.set('tl', 'tr')
+  url.searchParams.set('dt', 't')
+  url.searchParams.set('q', source)
+  const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
+  if (!response.ok) throw new Error('Translation service request failed')
+  const payload = await response.json() as unknown
+  if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error('Translation service returned invalid data')
+  const translated = (payload[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '').join('')
+  const pieces = translated.split(separator)
+  if (pieces.length !== 5 || pieces.some((piece) => !piece.trim())) throw new Error('Translation response could not be separated')
+  return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
+}
+
+async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
+  const response = await fetch('https://the-trivia-api.com/v2/questions?limit=20&categories=general_knowledge', {
+    headers: { Accept: 'application/json' },
+    signal: AbortSignal.timeout(8000),
+  })
+  if (!response.ok) throw new Error('Trivia API request failed')
+  const payload = await response.json() as TriviaApiQuestion[]
+  if (!Array.isArray(payload)) throw new Error('Trivia API returned invalid data')
+
+  const questions = payload.flatMap((item): TriviaQuestion[] => {
+    const prompt = item.question?.text?.trim()
+    const correct = item.correctAnswer?.trim()
+    const incorrect = item.incorrectAnswers
+    if (!prompt || !correct || !Array.isArray(incorrect) || incorrect.length < 3) return []
+    const options = [correct, ...incorrect.slice(0, 3)]
+    for (let index = options.length - 1; index > 0; index -= 1) {
+      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1)
+      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]]
+    }
+    return [{ prompt, options, answerIndex: options.indexOf(correct) }]
+  })
+  if (questions.length < 10) throw new Error('Trivia API returned too few questions')
+
+  return Promise.all(questions.map(translateQuestionToTurkish))
+}
 
 function corsHeaders(origin: string) {
   return {
@@ -143,25 +194,39 @@ export class RoomDurableObject extends DurableObject<Env> {
       if (message.type === 'start_game') {
         if (attachment.playerId !== current.ownerId) return this.reject(socket, 'unauthorized_action')
         if (current.trivia.status !== 'lobby') return this.reject(socket, 'game_already_started')
-        this.room = { ...current, trivia: { ...current.trivia, status: 'playing', questionIndex: 0, answered: [] } }
+        let questions: TriviaQuestion[]
+        try {
+          questions = await fetchTriviaQuestions()
+        } catch {
+          return this.reject(socket, 'question_source_unavailable')
+        }
+        const latest = this.restoreRoom(attachment.roomCode)
+        if (!latest || latest.trivia.status !== 'lobby') return this.reject(socket, 'game_already_started')
+        this.room = { ...latest, trivia: { ...latest.trivia, status: 'playing', questionIndex: 0, questions, answered: [] } }
       } else {
         if (current.trivia.status !== 'playing') return this.reject(socket, 'game_not_playing')
+        if (message.questionIndex !== current.trivia.questionIndex) {
+          socket.send(JSON.stringify({ type: 'room_update', room: publicRoom(current) }))
+          return
+        }
         if (current.trivia.answered.includes(attachment.playerId)) return this.reject(socket, 'already_answered')
-        const question = TRIVIA_QUESTIONS[current.trivia.questionIndex]
+        const question = current.trivia.questions[current.trivia.questionIndex]
+        if (!question) return this.reject(socket, 'game_not_playing')
         const correct = message.answerIndex === question.answerIndex
         const scores = { ...current.trivia.scores, [attachment.playerId]: (current.trivia.scores[attachment.playerId] ?? 0) + (correct ? 10 : 0) }
         const answered = [...current.trivia.answered, attachment.playerId]
         const activePlayers = current.players.filter((player) => player.connected).map((player) => player.id)
         const allAnswered = activePlayers.length > 0 && activePlayers.every((id) => answered.includes(id))
+        const shouldAdvance = correct || allAnswered
         let questionIndex = current.trivia.questionIndex
         let status: 'playing' | 'finished' = current.trivia.status
         let nextAnswered = answered
-        if (allAnswered) {
+        if (shouldAdvance) {
           questionIndex += 1
           nextAnswered = []
-          if (questionIndex >= TRIVIA_QUESTIONS.length) status = 'finished'
+          if (questionIndex >= current.trivia.questions.length) status = 'finished'
         }
-        this.room = { ...current, trivia: { status, questionIndex, scores, answered: nextAnswered } }
+        this.room = { ...current, trivia: { ...current.trivia, status, questionIndex, questions: current.trivia.questions, scores, answered: nextAnswered } }
       }
       this.attachRoomToSockets()
       this.broadcast({ type: 'room_update', room: publicRoom(this.room) })

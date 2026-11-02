@@ -110,15 +110,13 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
   })
   if (questions.length < 10) throw new Error('Trivia API returned too few questions')
 
-  // Çeviri servisi erişilemezse oyunun başlamasını engelleme; özgün soruyu kullan.
-  return Promise.all(questions.map(async (question) => {
-    try {
-      return await translateQuestionToTurkish(question)
-    } catch (error) {
-      console.warn('Genel kültür soruları Türkçeye çevrilemedi; hazır Türkçe sorular kullanılacak:', error)
-      return shuffledTurkishTriviaQuestions()
-    }
-  }))
+  // Çeviri servisi hata verirse İngilizce soru göstermek yerine hazır Türkçe soruları kullan.
+  try {
+    return await Promise.all(questions.map((question) => translateQuestionToTurkish(question)))
+  } catch (error) {
+    console.warn('Genel kültür soruları Türkçeye çevrilemedi; hazır Türkçe sorular kullanılacak:', error)
+    return shuffledTurkishTriviaQuestions()
+  }
 }
 
 function corsHeaders(origin: string) {

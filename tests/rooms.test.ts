@@ -165,7 +165,9 @@ describe('Worker ve Durable Object WebSocket akışı', () => {
     const ownerWelcome = await sendAndRead(owner, { type: 'create', nickname: 'Ev Sahibi', gameId: 'trivia' })
     const roomCode = (ownerWelcome.room as { code: string }).code
     const guest = await openSocket(`/api/rooms/${roomCode}`)
+    const ownerJoinUpdate = nextMessage(owner)
     await sendAndRead(guest, { type: 'join', nickname: 'Misafir' })
+    await ownerJoinUpdate
 
     const ownerStartUpdate = nextMessage(owner)
     const guestStartUpdate = nextMessage(guest)

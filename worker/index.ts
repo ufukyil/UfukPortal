@@ -43,7 +43,7 @@ async function translateQuestionToTurkish(question: TriviaQuestion): Promise<Tri
   url.searchParams.set('dt', 't')
   url.searchParams.set('q', source)
   const response = await fetch(url, { signal: AbortSignal.timeout(8000) })
-  if (!response.ok) throw new Error('Translation service request failed')
+  if (!response.ok) throw new Error(`Translation service request failed (HTTP ${response.status})`)
   const payload = await response.json() as unknown
   if (!Array.isArray(payload) || !Array.isArray(payload[0])) throw new Error('Translation service returned invalid data')
   const translated = (payload[0] as unknown[]).map((part) => Array.isArray(part) && typeof part[0] === 'string' ? part[0] : '').join('')
@@ -75,7 +75,15 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
   })
   if (questions.length < 10) throw new Error('Trivia API returned too few questions')
 
-  return Promise.all(questions.map(translateQuestionToTurkish))
+  // Çeviri servisi erişilemezse oyunun başlamasını engelleme; özgün soruyu kullan.
+  return Promise.all(questions.map(async (question) => {
+    try {
+      return await translateQuestionToTurkish(question)
+    } catch (error) {
+      console.warn('Genel kültür sorusu çevrilemedi; İngilizce metin kullanılacak:', error)
+      return question
+    }
+  }))
 }
 
 function corsHeaders(origin: string) {

@@ -82,7 +82,8 @@ async function fetchTriviaQuestions(): Promise<TriviaCandidate[]> {
 
   const translated = await Promise.all(questions.map(async (question) => {
     try {
-      return await translateQuestionToTurkish(question)
+      const translatedQuestion = await translateQuestionToTurkish(question)
+      return { ...translatedQuestion, ...(question.sourceId ? { sourceId: question.sourceId } : {}) }
     } catch (error) {
       console.warn('Bir genel kültür sorusu Türkçeye çevrilemedi:', error)
       return null

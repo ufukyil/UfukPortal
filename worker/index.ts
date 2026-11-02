@@ -52,6 +52,41 @@ async function translateQuestionToTurkish(question: TriviaQuestion): Promise<Tri
   return { prompt: pieces[0].trim(), options: pieces.slice(1).map((piece) => piece.trim()), answerIndex: question.answerIndex }
 }
 
+const TURKISH_TRIVIA_QUESTIONS: TriviaQuestion[] = [
+  { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
+  { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Mars', 'Jüpiter', 'Venüs'], answerIndex: 2 },
+  { prompt: 'Suyun kimyasal formülü nedir?', options: ['CO2', 'O2', 'H2O', 'NaCl'], answerIndex: 2 },
+  { prompt: 'İstanbul Boğazı hangi iki denizi birbirine bağlar?', options: ['Karadeniz ile Marmara Denizi', 'Ege Denizi ile Akdeniz', 'Marmara Denizi ile Ege Denizi', 'Karadeniz ile Hazar Denizi'], answerIndex: 0 },
+  { prompt: 'Dünyanın doğal uydusunun adı nedir?', options: ['Europa', 'Ay', 'Titan', 'Phobos'], answerIndex: 1 },
+  { prompt: 'Bir üçgenin iç açılarının toplamı kaç derecedir?', options: ['90', '180', '270', '360'], answerIndex: 1 },
+  { prompt: 'Bitkiler fotosentez sırasında hangi gazı kullanır?', options: ['Oksijen', 'Azot', 'Karbondioksit', 'Hidrojen'], answerIndex: 2 },
+  { prompt: 'İnsan vücudundaki kanı pompalayan organ hangisidir?', options: ['Akciğer', 'Beyin', 'Karaciğer', 'Kalp'], answerIndex: 3 },
+  { prompt: '“Nutuk” adlı eserin yazarı kimdir?', options: ['Mehmet Akif Ersoy', 'Mustafa Kemal Atatürk', 'Namık Kemal', 'Ziya Gökalp'], answerIndex: 1 },
+  { prompt: 'Dünyanın en büyük okyanusu hangisidir?', options: ['Atlas Okyanusu', 'Hint Okyanusu', 'Arktik Okyanusu', 'Pasifik Okyanusu'], answerIndex: 3 },
+  { prompt: 'Satrançta oyun başında her oyuncunun kaç taşı vardır?', options: ['12', '16', '18', '20'], answerIndex: 1 },
+  { prompt: 'Türkiye’nin başkenti neresidir?', options: ['İstanbul', 'İzmir', 'Ankara', 'Bursa'], answerIndex: 2 },
+  { prompt: 'Işığın boşluktaki hızı yaklaşık kaç kilometre/saniyedir?', options: ['30.000', '150.000', '300.000', '3.000.000'], answerIndex: 2 },
+  { prompt: '“Kızıl Gezegen” olarak bilinen gezegen hangisidir?', options: ['Merkür', 'Mars', 'Satürn', 'Neptün'], answerIndex: 1 },
+  { prompt: 'Dünya üzerindeki en büyük memeli hayvan hangisidir?', options: ['Afrika fili', 'Zürafa', 'Mavi balina', 'Su aygırı'], answerIndex: 2 },
+  { prompt: 'Türkiye’nin en yüksek dağı hangisidir?', options: ['Erciyes Dağı', 'Ağrı Dağı', 'Uludağ', 'Kaçkar Dağı'], answerIndex: 1 },
+  { prompt: 'Bir yıl, artık yıl değilse kaç gündür?', options: ['364', '365', '366', '367'], answerIndex: 1 },
+  { prompt: 'Periyodik tabloda “Fe” hangi elementin simgesidir?', options: ['Flor', 'Fosfor', 'Demir', 'Gümüş'], answerIndex: 2 },
+  { prompt: 'Olimpiyat halkalarının sayısı kaçtır?', options: ['4', '5', '6', '7'], answerIndex: 1 },
+  { prompt: 'Türkiye hangi kıtalar üzerinde topraklara sahiptir?', options: ['Avrupa ve Asya', 'Asya ve Afrika', 'Avrupa ve Afrika', 'Avrupa ve Amerika'], answerIndex: 0 },
+];
+
+function shuffledTurkishTriviaQuestions(): TriviaQuestion[] {
+  return TURKISH_TRIVIA_QUESTIONS.map((question) => {
+    const options = [...question.options];
+    const correct = options[question.answerIndex];
+    for (let index = options.length - 1; index > 0; index -= 1) {
+      const swapIndex = crypto.getRandomValues(new Uint32Array(1))[0] % (index + 1);
+      ;[options[index], options[swapIndex]] = [options[swapIndex], options[index]];
+    }
+    return { prompt: question.prompt, options, answerIndex: options.indexOf(correct) };
+  });
+}
+
 async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
   const response = await fetch('https://the-trivia-api.com/v2/questions?limit=20&categories=general_knowledge', {
     headers: { Accept: 'application/json' },
@@ -80,8 +115,8 @@ async function fetchTriviaQuestions(): Promise<TriviaQuestion[]> {
     try {
       return await translateQuestionToTurkish(question)
     } catch (error) {
-      console.warn('Genel kültür sorusu çevrilemedi; İngilizce metin kullanılacak:', error)
-      return question
+      console.warn('Genel kültür soruları Türkçeye çevrilemedi; hazır Türkçe sorular kullanılacak:', error)
+      return shuffledTurkishTriviaQuestions()
     }
   }))
 }

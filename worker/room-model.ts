@@ -11,20 +11,38 @@ export type RoomPlayer = {
   connected: boolean
   disconnectedAt: number | null
 }
+export type TriviaQuestion = { prompt: string; options: string[]; answerIndex: number }
+export type TriviaGame = { status: 'lobby' | 'playing' | 'finished'; questionIndex: number; scores: Record<string, number>; answered: string[] }
 export type RoomState = {
   code: string
   gameId: GameId
   ownerId: string
   players: RoomPlayer[]
+  trivia: TriviaGame
 }
 export type RoomError = 'invalid_nickname' | 'invalid_game' | 'room_not_found' | 'room_full' | 'nickname_taken' | 'already_connected'
 export type ClientMessage =
   | { type: 'create'; nickname: string; gameId: GameId }
   | { type: 'join'; nickname: string; resumeToken?: string }
+  | { type: 'start_game' }
+  | { type: 'submit_answer'; answerIndex: number }
   | { type: 'leave' }
   | { type: 'ping' }
 
 const validGameIds = new Set<GameId>(['charades', 'trivia', 'movie'])
+
+export const TRIVIA_QUESTIONS: TriviaQuestion[] = [
+  { prompt: 'Türkiye Cumhuriyeti hangi yıl ilan edildi?', options: ['1920', '1923', '1938', '1919'], answerIndex: 1 },
+  { prompt: 'Güneş Sistemi’nin en büyük gezegeni hangisidir?', options: ['Dünya', 'Satürn', 'Jüpiter', 'Mars'], answerIndex: 2 },
+  { prompt: 'Suyun kimyasal formülü nedir?', options: ['CO₂', 'O₂', 'NaCl', 'H₂O'], answerIndex: 3 },
+  { prompt: 'İstiklal Marşı’nın yazarı kimdir?', options: ['Namık Kemal', 'Mehmet Âkif Ersoy', 'Tevfik Fikret', 'Ziya Gökalp'], answerIndex: 1 },
+  { prompt: 'Dünyanın en büyük okyanusu hangisidir?', options: ['Atlas Okyanusu', 'Hint Okyanusu', 'Arktik Okyanusu', 'Pasifik Okyanusu'], answerIndex: 3 },
+  { prompt: 'Bir üçgenin iç açıları toplamı kaç derecedir?', options: ['90', '180', '270', '360'], answerIndex: 1 },
+  { prompt: 'Bitkiler fotosentez sırasında hangi gazı kullanır?', options: ['Oksijen', 'Azot', 'Karbondioksit', 'Hidrojen'], answerIndex: 2 },
+  { prompt: '“Küçük Prens” kitabının yazarı kimdir?', options: ['Jules Verne', 'Antoine de Saint-Exupéry', 'Victor Hugo', 'Albert Camus'], answerIndex: 1 },
+  { prompt: 'İnsan vücudundaki en büyük organ hangisidir?', options: ['Karaciğer', 'Akciğer', 'Deri', 'Kalp'], answerIndex: 2 },
+  { prompt: 'Olimpiyat halkalarının sayısı kaçtır?', options: ['4', '5', '6', '7'], answerIndex: 1 },
+]
 
 export function normalizeNickname(value: unknown): string | null {
   if (typeof value !== 'string') return null
@@ -55,12 +73,14 @@ export function parseClientMessage(data: string | ArrayBuffer): ClientMessage | 
       ? { type: 'join', nickname: message.nickname }
       : { type: 'join', nickname: message.nickname, resumeToken: message.resumeToken }
   }
+  if (message.type === 'start_game' && Object.keys(message).length === 1) return { type: 'start_game' }
+  if (message.type === 'submit_answer' && Object.keys(message).length === 2 && Number.isInteger(message.answerIndex) && (message.answerIndex as number) >= 0 && (message.answerIndex as number) <= 3) return { type: 'submit_answer', answerIndex: message.answerIndex as number }
   if ((message.type === 'leave' || message.type === 'ping') && Object.keys(message).length === 1) return { type: message.type }
   return null
 }
 
 export function createRoom(code: string, gameId: GameId, nickname: string, playerId: string): RoomState {
-  return { code, gameId, ownerId: playerId, players: [{ id: playerId, nickname, connected: true, disconnectedAt: null }] }
+  return { code, gameId, ownerId: playerId, players: [{ id: playerId, nickname, connected: true, disconnectedAt: null }], trivia: { status: 'lobby', questionIndex: 0, scores: { [playerId]: 0 }, answered: [] } }
 }
 
 export function pruneDisconnected(room: RoomState, now: number): RoomState {
@@ -84,6 +104,14 @@ export function publicRoom(room: RoomState) {
     code: room.code,
     gameId: room.gameId,
     players: room.players.map(({ id, nickname, connected }) => ({ id, nickname, connected, isOwner: id === room.ownerId })),
+    trivia: {
+      status: room.trivia.status,
+      questionIndex: room.trivia.questionIndex,
+      question: room.trivia.status === 'playing' ? { prompt: TRIVIA_QUESTIONS[room.trivia.questionIndex].prompt, options: TRIVIA_QUESTIONS[room.trivia.questionIndex].options } : null,
+      scores: room.players.map(({ id, nickname }) => ({ playerId: id, nickname, score: room.trivia.scores[id] ?? 0 })),
+      answeredPlayerIds: [...room.trivia.answered],
+      totalQuestions: TRIVIA_QUESTIONS.length,
+    },
   }
 }
 

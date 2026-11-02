@@ -197,7 +197,8 @@ export class RoomDurableObject extends DurableObject<Env> {
         let questions: TriviaQuestion[]
         try {
           questions = await fetchTriviaQuestions()
-        } catch {
+        } catch (error) {
+          console.error('Genel kültür soru yükleme hatası:', error)
           return this.reject(socket, 'question_source_unavailable')
         }
         const latest = this.restoreRoom(attachment.roomCode)

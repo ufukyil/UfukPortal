@@ -63,3 +63,11 @@ Tüm kontroller yeniden atanabilir olmalı; gamepad desteği hedefleniyorsa ayn�
 
 ## Sistem kapsamı öncelikleri
 İlk oynanabilir dikey dilim için zorunlu: hareket, kamera, temel savaş, bir düşman, can/dayanıklılık, etkileşimli nesne ve kayıt noktası. Gelişmiş üretim, çok sayıda para birimi, geniş satıcı ağı ve endgame sistemleri ancak çekirdek döngü çalıştıktan sonra değerlendirilir.
+
+
+## Ölüm ve kalıcı kayıp ilkesi
+Kara Mühür'de **kalıcı ölüm veya karakter kaybı yoktur**. Ölüm, oyuncunun bütün eşyalarını, karakterini ya da ilerlemesini silen bir ceza değildir. Yeniden deneme akışı hızlı ve adil olmalıdır.
+
+- Kontrol noktasından yeniden başlama ve boss denemesini sıfırlama kuralları açık olur.
+- Görevlerde alınmış kalıcı hikâye kayıtları ölümle silinmez.
+- Zorluk, kalıcı kayıp tehdidinden değil; okunabilir saldırı örüntülerini öğrenmekten ve kaynakları yönetmekten gelir.

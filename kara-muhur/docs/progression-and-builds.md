@@ -29,3 +29,9 @@ Oyuncu farklı bir dalı denemek istediğinde tüm ilerlemeyi kaybetmemelidir. Y
 
 ## Endgame yaklaşımı
 Ana hikâye sonrası içerik sayısal güç yarışına dönüşmez. Seçkin düşmanlar daha karmaşık saldırı örüntüleri sunar; isteğe bağlı bosslar taktik ustalığı sınar; kısa keşif zincirleri geçmişe yeni bakışlar ekler. Sonsuz seviye veya milyonlarca hasar hedeflenmez.
+
+
+## Hibrit yetenek ağacı ve yeniden dağıtım
+Yetenek ağacı tamamen doğrusal değil, **hibrit** yapıdadır: her sınıfın üç ana dalı vardır, fakat belirli eşiklerde sınırlı çapraz seçimler farklı yapılar kurmaya izin verir. Her şeyi aynı anda almak mümkün değildir; uzmanlaşma gerçek bir tercihtir.
+
+Yetenek puanları kalıcı bir hataya dönüşmemelidir. Yeniden dağıtım, belirlenmiş güvenli noktalarda düşük ve anlaşılır bir bedelle yapılabilir. Böylece oyuncu farklı sınıf dalı kombinasyonlarını deneyebilir; sistem denemeyi teşvik eder ama seçimlerin anlamını korur.

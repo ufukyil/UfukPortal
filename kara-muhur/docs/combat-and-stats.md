@@ -68,3 +68,12 @@ Düşmanların ayrı bir denge ölçeri vardır. Ağır saldırılar, doğru kar
 
 ## Okunabilirlik
 Renk tek başına uyarı değildir; şekil, ses ve animasyon eşlik eder. Efektler karakter siluetini ve tehlike alanını örtmez. Zorluk, düşmanın canını katlamak yerine davranış ve karşılaşma düzeniyle artırılır.
+
+
+## Tempo ve sıradan düşman dayanıklılığı
+Çatışma **hızlı ve tepkisel** hissettirmelidir. Sıradan düşmanlar tek vuruşta erimez; birkaç anlamlı saldırı ister. Bununla birlikte aynı düşmana gereksiz uzun süre vurmak da temel oyun döngüsü değildir. Oyuncu düşman niyetini okuyup saldırı, kaçınma, karşılık ve yetenekleri akıcı biçimde birbirine bağlamalıdır.
+
+- Normal düşmanlar birkaç temiz isabetle yenilecek ölçüde dayanıklıdır.
+- Elitler yeni bir davranış veya taktik baskı getirir; yalnızca canı büyütülmez.
+- Bosslar daha uzun sürer çünkü yeni örüntüler öğrenilir, ham hasar havuzu şişirilmez.
+- Animasyon toparlanmaları tepkisel kontrole izin verir; her hamle oyuncuyu uzun süre kilitlemez.

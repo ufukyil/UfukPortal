@@ -26,3 +26,12 @@ Mührün kapanması güvenliğin tek yolu gibi görünse de bunun bedeli olabili
 - Farklı kaynaklar çelişebilir; çelişki otomatik olarak birinin yalan söylediği anlamına gelmez.
 - Mitolojik belirsizlik korunur, fakat temel olayların duygusal sonucu anlaşılır olmalıdır.
 - Her sır ana hikâyeye bağlanmak zorunda değildir.
+
+
+## Hatırlayanlar — Araştırmacı
+Hatırlayanlar, Kara Mühür'ün kapatılmasına yardım etmiş ve kendi anılarını da mühürlemiş araştırmacıdır. Onun bıraktığı notlar kahramana yol gösterir; ancak kayıtları eksiksiz veya tarafsız değildir. Bazı notlar birbirleriyle çelişir, çünkü Hatırlayanlar gerçeğin tamamını kaydetmemiş ya da kendini korumak için bazı parçaları saklamıştır.
+
+- **Hikâyedeki rolü:** geçmişin güvenilir anlatıcısı gibi görünür, sonra kendi seçimlerinin de olayların parçası olduğu anlaşılır.
+- **Görsel yaklaşım:** yaşını ve geçmişini kesinleştirmeyen, yüzü gölgede kalabilen ama okunaklı bir siluet; taş yazı tabletleri, iplerle tutturulmuş notlar ve aşınmış bir araştırma çantası.
+- **Karakter ilkesi:** gizem uğruna anlamsız davranmaz; bilgi saklamasının somut bir korkusu veya bedeli vardır.
+- **Hikâye bağlantısı:** kahramanın geçmişte mührü kapatmış olması ve kendi anılarını mühürlemesiyle doğrudan bağlantılıdır.

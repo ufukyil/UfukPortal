@@ -1,0 +1,24 @@
+# İşletim sistemi
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Geçici dosyalar
+*.tmp
+*.bak
+*.log
+
+# Motor ve derleme çıktıları
+/Build/
+/Builds/
+/Temp/
+/Cache/
+/Library/
+/obj/
+/bin/
+
+# Yerel ayarlar ve gizli bilgiler
+.env
+.env.*
+!.env.example
+*.local

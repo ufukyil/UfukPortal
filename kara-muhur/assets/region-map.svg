@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+<defs><linearGradient id="paper" x2="0" y2="1"><stop stop-color="#d0c4a4"/><stop offset="1" stop-color="#8c8068"/></linearGradient><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".7" numOctaves="2" seed="7"/><feColorMatrix values="0 0 0 0 .2 0 0 0 0 .17 0 0 0 0 .12 0 0 0 .1 0"/></filter></defs>
+<rect width="1400" height="900" fill="#171b1b"/>
+<rect x="35" y="35" width="1330" height="830" fill="url(#paper)" stroke="#3a3730" stroke-width="8"/>
+<rect x="50" y="50" width="1300" height="800" fill="none" stroke="#655c4a" stroke-width="2"/>
+<path d="M100 580 Q220 520 330 590 T550 560 T760 610 T990 555 T1270 600" fill="none" stroke="#6c6b59" stroke-width="8" opacity=".7"/>
+<path d="M120 230 L210 150 275 200 345 125 410 210 485 160 555 250 650 180 735 250 820 145 900 230 1000 170 1080 250 1190 160 1290 235" fill="none" stroke="#4e514a" stroke-width="15" opacity=".75"/>
+<path d="M100 700 Q260 650 380 700 T620 700 T850 680 T1080 715 T1300 680" fill="none" stroke="#9e3d2e" stroke-width="4" stroke-dasharray="12 10"/>
+<g fill="#45473d" stroke="#252923" stroke-width="4"><circle cx="250" cy="600" r="16"/><circle cx="660" cy="450" r="16"/><circle cx="1090" cy="360" r="16"/><circle cx="930" cy="700" r="16"/><circle cx="480" cy="300" r="16"/></g>
+<g font-family="Georgia,serif" fill="#292a25"><text x="145" y="655" font-size="32">KÜL OVASI</text><text x="540" y="410" font-size="31">TAŞ ANA'NIN İZLERİ</text><text x="965" y="320" font-size="31">YEDİ EŞİK</text><text x="360" y="270" font-size="21">KIRIK SÜTUNLAR</text><text x="830" y="760" font-size="23">ESKİ ARAŞTIRMA YOLU</text></g>
+<g fill="none" stroke="#3d4037" stroke-width="3"><path d="M250 600 Q400 570 660 450 T1090 360"/><path d="M660 450 Q750 560 930 700"/><path d="M480 300 Q530 350 660 450"/></g>
+<g transform="translate(1230 120)" stroke="#33352e" fill="none" stroke-width="4"><path d="M0 80 L0 0 L-20 28 L0 0 L20 28"/><circle cy="80" r="8"/></g><text x="1230" y="230" text-anchor="middle" fill="#33352e" font-family="Georgia,serif" font-size="18">K</text>
+<text x="75" y="100" fill="#312e27" font-family="Georgia,serif" font-size="38" letter-spacing="5">UNUTULMUŞ TOPRAKLAR</text>
+<text x="75" y="132" fill="#494538" font-family="Arial,sans-serif" font-size="16" letter-spacing="2">KEŞİF HARİTASI • TASLAK, ÖLÇEKLİ COĞRAFİ HARİTA DEĞİLDİR</text>
+<g transform="translate(1080 770)" fill="#38392f"><rect width="230" height="52" fill="#c3b596" stroke="#615847" stroke-width="2"/><text x="115" y="33" text-anchor="middle" font-family="Arial,sans-serif" font-size="16">İZLER VE GEÇİTLER</text></g>
+</svg>

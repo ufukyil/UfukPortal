@@ -74,8 +74,8 @@ Kahraman geçmişte mührü kapatmış ve kendi anılarını da mühürlemiştir
 ## Sayısal tasarım kuralı
 Hasar, can, zırh, direnç ve seviye ilerlemesi oyuncunun zihninde takip edilebilir kalmalıdır. Endgame dahil hiçbir sistem kontrolsüz biçimde milyonlara çıkan sayılar veya aşırı güç şişmesi üretmemelidir. Güç, yalnızca büyük sayılarla değil; zamanlama, pozisyon, direnç, yetenek etkileşimi ve oyuncu ustalığıyla hissedilmelidir.
 
-## Teknik durum
-Bu depo şu an **tasarım ve konsept dokümantasyonu** içerir. Oynanabilir prototipin tamamlandığı veya nihai oyun motorunun seçildiği iddia edilmez. Teknik yön, küçük bir dikey dilim test edilerek netleştirilecektir.
+## Üretim yaklaşımı
+Bu depo, Kara Mühür'ün dünya kurgusunu, oynanış sistemlerini, görsel yönünü ve üretim planını bir araya getiren proje kaynağıdır. Teknik kararlar, dikey dilim yaklaşımı ve oynanış testleriyle doğrulanacak şekilde ele alınır.
 
 ## Kapsam ve durum
 Kara Mühür bir geliştirme projesidir. Bu depo; dünya, hikâye, sınıflar, savaş, yetenekler, eşya tasarımı, görevler, düşmanlar, arayüz ve görsel yön için yaşayan tasarım kaynağıdır. Taslak sayılar ve sistemler prototip testleriyle doğrulanacaktır.

@@ -28,6 +28,8 @@ Dünya; Anadolu'nun kadim kültürlerinden, taş mimarisinden, sözlü anlatı g
 - **Dünya:** Kurgusal, mitolojik Anadolu
 - **Temalar:** Hafıza, kayıp, bedel, kader, unutulmuş uygarlıklar
 - **Sınıflar:** Savaşçı, Taş Büyücüsü, Ruh Çağıran, Gölge Avcısı, Yaban Bekçisi
+- **Savaş:** hızlı aksiyon, okunabilir saldırılar; sıradan düşmanlar birkaç anlamlı vuruş ister
+- **Ölüm:** kalıcı ölüm ve karakter kaybı yok
 - **Tasarım ilkesi:** Okunabilir çatışma, anlamlı ilerleme ve ölçülü sayısal değerler
 
 ## Hikâyeye kısa bakış
@@ -53,6 +55,7 @@ Kahraman geçmişte mührü kapatmış ve kendi anılarını da mühürlemiştir
 - [Sözlük](docs/glossary.md)
 
 ### Karakter ve oynanış sistemleri
+- [Ana karakter ve önemli figürler](docs/characters-and-npcs.md)
 - [Karakterler ve beş sınıf](docs/characters-and-classes.md)
 - [Savaş, istatistikler ve denge](docs/combat-and-stats.md)
 - [Yetenekler, dallar ve talantlar](docs/skills-and-talents.md)
